@@ -1,0 +1,179 @@
+---
+title: "EDA"
+output: html_document
+---
+
+Load data into usable data frames.
+We did this for the following data sets D04 Dwelling Conditions, D05 Basic Services, D06 Household Energy, D07 Household Well being, D09 Household Resources and D10 Mobility Access 
+
+```{r}
+
+library(dplyr)
+
+D04 <- read.csv("../data/raw/D04_Dwelling_Conditions.csv")
+D05 <- read.csv("../data/raw/D05_Basic_Services.csv")
+D06 <- read.csv("../data/raw/D06_Household_Energy.csv")
+D07 <- read.csv("../data/raw/D07_Household_Wellbeing.csv")
+D09 <- read.csv("../data/raw/D09_Household_Resources.csv")
+D10 <- read.csv("../data/raw/D10_Mobility_Access.csv")
+
+#save all the files into a list so that i can iterate through all of them in for loops later on 
+datafiles <- list(D04=D04,D05=D05,D06=D06,D07=D07, D09=D09,D10=D10)
+
+
+for (name in names(datafiles)) {
+  file <- datafiles[[name]]
+  cat("\n========== ", name, " ==========\n", sep = "")
+
+  cat("\n-- str --\n");        str(file)          # str prints itself
+  cat("\n-- dim --\n");        print(dim(file))   # everything else needs print() as otherwise they would just execute silently in the background and not show anythin 
+  cat("\n-- names --\n");      print(names(file))
+  cat("\n-- head --\n");       print(head(file))
+  cat("\n-- tail --\n");       print(tail(file))
+  cat("\n")
+  
+ 
+}
+```
+# Summary of all Data Set points
+#### this would be easier to see all grouped together so therefore we use the summary function
+```{r}
+for (name in names(datafiles)) {
+  file <- datafiles[[name]]
+   cat("\n-- Summary of numbers --\n");  print(summary(file))
+}
+```
+# Now for the Standard Deviations for each dataset points
+#### this is split up per column if possible, code is explain in the code block
+```{r}
+cat("Standard Deviation for each dataset")
+for (name in names(datafiles)) {
+  file <- datafiles[[name]]
+  # now i am going to make a function print, that will only print the numeric value columns standard deviations, if i dont do this, then i will get a run time error as some of the columns are characters and not numeric, and standard deviation cant be done on character values.
+  print(sapply(file, function(col) if (is.numeric(col)) sd(col, na.rm = TRUE) else NA))
+}
+```
+# Now for the range of all columns for the respective data sets
+```{r}
+cat("The range for each data set :")
+for (name in names(datafiles)) {
+  file <- datafiles[[name]]
+  #same applies here as above, just now we are performing the quantile function on all the numeric values
+  print(sapply(file, function(col) if (is.numeric(col)) quantile(col, na.rm = TRUE) else NA))
+}
+```
+# Categorical Counts and Levels
+```{r}
+# For each categorical column, show the count AND its proportion (% share) side by side
+for (name in names(datafiles)) {
+  file <- datafiles[[name]]
+  cat("\n====", name, "====\n")
+  for (colName in names(file)) {
+     if (length(unique(file[[colName]])) <= 20) {   # only true categorical columns (skip IDs / high-cardinality)
+        cat("\n--", colName, "--\n")
+        tbl  <- table(file[[colName]], useNA = "always")   # raw counts (NA counted too)
+        prop <- round(prop.table(tbl), 3)                  # proportion of the total, 3 decimals
+        # stack the two rows into one table so each count sits above its proportion
+        print(rbind(count = tbl, prop = prop))
+     }
+  }
+}
+```
+# Missing Values
+```{r}
+for (name in names(datafiles)) {
+  file <- datafiles[[name]]
+  cat("\n====", name, "====\n")
+  print(colSums(is.na(file)))       # NA count for every column at once (no inner loop needed)
+  cat("Rows with any NA:", sum(!complete.cases(file)), "\n")  # rows missing at least one value
+}
+
+```
+#Graphing
+##Histograms and Box Plots
+```{r}
+
+hist(D07$TotalMonthlyHouseholdIncomeRaw)
+hist(D09$TotalMonthlyHouseholdIncomeRaw)
+
+hist(D09$RequiredIncomeRaw)
+
+hist(D04$RentRaw)
+
+# TimeToWaterRaw is stored as CHARACTER because it contains "N/A" / "not recorded".
+# as.numeric() coerces it; the text values become NA (you'll see a coercion warning). DATA-QUALITY FINDING.
+hist(as.numeric(D05$TimeToWaterRaw), main = "Time to Water", xlab = "Minutes")
+hist(D10$TimeToHealthFacilityRaw)
+hist(D10$TaxiCostRaw)
+hist(D10$TaxiDistanceRaw)
+
+# formula interface: write the column name only (NOT D07$...) when using data =
+# outline = FALSE hides extreme outliers so the boxes stay readable (income is very skewed)
+# las = 2 turns the province labels vertical so all 9 fit
+boxplot(TotalMonthlyHouseholdIncomeRaw ~ Province, data = D07, outline = FALSE, las = 2)
+boxplot(TotalMonthlyHouseholdIncomeRaw ~ Province, data = D09, outline = FALSE, las = 2)
+
+boxplot(D09$RequiredIncomeRaw)
+
+boxplot(D04$RentRaw)
+
+boxplot(as.numeric(D05$TimeToWaterRaw), main = "Time to Water")  # character col -> numeric (text becomes NA)
+boxplot(D10$TimeToHealthFacilityRaw)
+boxplot(D10$TaxiCostRaw)
+boxplot(D10$TaxiDistanceRaw)
+```
+##Discrete Counts
+```{r}
+# HeadAge has a wide range, so a histogram (binned) reads best
+hist(D04$HeadAge, main = "Head-of-Household Age", xlab = "Age (years)", col = "steelblue")
+
+# The rest are small-range counts (0,1,2,3...), so a barplot of table() is clearer than a histogram
+barplot(table(D04$HouseholdSize),            main = "Household Size",        xlab = "People",    ylab = "Households", col = "steelblue")
+barplot(table(D04$TotalRooms),               main = "Rooms per Dwelling",    xlab = "Rooms",     ylab = "Households", col = "steelblue")
+barplot(table(D09$TotalVehicles),            main = "Vehicles per Household",xlab = "Vehicles",  ylab = "Households", col = "steelblue")
+barplot(table(D09$SalaryEarnersInHousehold), main = "Salary Earners",        xlab = "Earners",   ylab = "Households", col = "steelblue")
+barplot(table(D09$SocialGrantRecipients),    main = "Social Grant Recipients",xlab = "Recipients",ylab = "Households", col = "steelblue")
+```
+##Categorical Bar Charts
+```{r}
+# barplot() needs a table() first — it plots the counts of each category, not the raw column.
+# las = 2 keeps axis labels readable when there are several categories.
+
+# --- Food security (D07) ---
+barplot(table(D07$AdultHungerCode),            main = "Adult Hunger",                 xlab = "Code", ylab = "Households", col = "tomato")
+barplot(table(D07$ChildHungerCode),            main = "Child Hunger",                 xlab = "Code", ylab = "Households", col = "tomato")
+barplot(table(D07$WorriedFoodWouldRunOutCode), main = "Worried Food Would Run Out",   xlab = "Code", ylab = "Households", col = "tomato")
+
+# --- Services (D05, D06) ---
+barplot(table(D06$ElectricityAccessCode),      main = "Electricity Access",           xlab = "Code", ylab = "Households", col = "darkorange")
+barplot(table(D06$LoadsheddingFrequencyCode),  main = "Loadshedding Frequency",       xlab = "Code", ylab = "Households", col = "darkorange")
+barplot(table(D05$DrinkingWaterSourceCode),    main = "Drinking Water Source",        xlab = "Code", ylab = "Households", col = "darkorange", las = 2)
+barplot(table(D05$WaterSafeCode),              main = "Water Considered Safe",        xlab = "Code", ylab = "Households", col = "darkorange")
+barplot(table(D05$MainToiletCode),             main = "Main Toilet Type",             xlab = "Code", ylab = "Households", col = "darkorange", las = 2)
+
+# --- Economic (D04, D09) ---
+barplot(table(D09$MainIncomeSourceCode),       main = "Main Income Source",           xlab = "Code", ylab = "Households", col = "seagreen", las = 2)
+barplot(table(D09$ExpenditureBandCode),        main = "Expenditure Band",             xlab = "Code", ylab = "Households", col = "seagreen")
+barplot(table(D04$TenureCode),                 main = "Tenure Type",                  xlab = "Code", ylab = "Households", col = "seagreen")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
