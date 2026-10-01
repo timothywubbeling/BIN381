@@ -1,0 +1,9 @@
+variable,r_type,valid_range,missing_action
+ComparativeIncomeCode,ordered factor (1-5),1 to 5; 9 = Unspecified -> reject/flag,"flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"
+GeoTypeCode,factor (Urban/Traditional_Tribal/Farms),"1, 2 or 3 only","flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"
+HouseholdSize,numeric,"1 to 25; 0 is invalid -> reject; 8 and 9 ARE valid, do not reject","flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"
+Income_Log,numeric (log1p of income),"derived from income, not user-entered directly","flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"
+Income_PerCapita,numeric (Rand per person),"derived from income and household size, not user-entered directly","flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"
+ElectricityAccessCode,factor (Yes/No),1 or 2; 9 = Unspecified -> reject/flag,"flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"
+SocialGrantRecipients,numeric (count),0 upward; 99 = Unspecified -> reject/flag,"flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"
+MainToiletCode,factor (1-12),1 to 12; 99 = Unspecified -> reject/flag,"flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"

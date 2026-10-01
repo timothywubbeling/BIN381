@@ -1,0 +1,3 @@
+﻿"Variable","SourceFile","Reason"
+"SalaryEarnersInHousehold","D09","Not a headcount: more salary earners than people in 13 259 households, plus 9999999 sentinels (Person C, Task 2)"
+"TotalGrantRecipients","D09","Not a count: the large values are Rand grant amounts such as 1990 and 480 (Person C, Task 2)"

@@ -1,0 +1,5 @@
+Technique,Engine,Final_Hyperparams,Resampling,Seed,Optimised_For
+Regularised multinomial logistic regression,glmnet,"penalty = 8.111e-10, mixture = 0.182","5-fold CV, stratified on Vulnerability_Tier",381,"roc_auc (macro, provisional - confirm with Person B)"
+Decision tree,rpart,"cost_complexity = 1e-10, tree_depth = 11, 
+                                min_n = 19","5-fold CV, stratified on Vulnerability_Tier",381,"roc_auc (macro, provisional - confirm with Person B)"
+Random forest,ranger,"mtry = 2, min_n = 31, trees = 500","5-fold CV, stratified on Vulnerability_Tier",381,"roc_auc (macro, provisional - confirm with Person B)"
