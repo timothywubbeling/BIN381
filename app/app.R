@@ -5,7 +5,7 @@ library(bslib)
 library(DT)
 library(workflows)   # needed so predict() knows how to use the saved workflow
 
-MODEL_PATH <- "../models/placeholder_workflow.rds"   # Thursday: "../models/final_workflow.rds"
+MODEL_PATH <- "../models/final_workflow.rds"   # Thursday: "../models/final_workflow.rds"
 THRESHOLD  <- 0.35                                    # Thursday: Person B's chosen threshold
 
 wf        <- readRDS(MODEL_PATH)
