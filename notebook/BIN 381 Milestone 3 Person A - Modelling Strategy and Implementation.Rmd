@@ -1,0 +1,326 @@
+---
+title: "BIN381 Milestone 3 - Person A: Modelling Strategy and Implementation"
+author: "Alexander Solomon - Group P1"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+
+This notebook covers Task 1: modelling strategy and implementation. It starts from Milestone 2's validated data set and train/test split and does not redo cleaning, integration or feature engineering. Three candidate classifiers are built in a `tidymodels` workflow, tuned with stratified cross-validation on the training set, and handed off: predictions to Person B (Rudi, Task 2/3) and fitted workflows plus an input schema to Person C (Timothy, Task 4).
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = FALSE)
+library(tidyverse)
+library(tidymodels)
+library(rpart)
+library(ranger)
+library(glmnet)
+library(knitr)
+
+IN_DIR <- "data/integrated/"
+OUT_DIR <- "data/modelling"
+dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
+
+set.seed(381)
+```
+
+# 1.1 Analytical Question and Task Type
+
+This is a multi-class classification problem: Business Objective 2 asks for households to be classified into food-insecurity vulnerability tiers. The target is `Vulnerability_Tier` (Food secure / Food insecure / Severely food insecure), derived in Milestone 2 from `FI_Score` on 20,925 households. `Food_Insecure_Binary` is kept as a fallback in case the thin middle tier (10.55% of households) is hard to separate, but the 3-tier target is primary.
+
+# 1.2 Load the Milestone 2 Split
+
+The train/test split is not re-created here. Milestone 2 already produced a stratified 70/30 split (`seed = 381`) on the validated, leakage-checked data set, so `M2_train.rds` and `M2_test.rds` are loaded as-is rather than re-split.
+
+```{r load}
+train_raw <- readRDS(file.path(IN_DIR, "M2_train.rds"))
+test_raw  <- readRDS(file.path(IN_DIR, "M2_test.rds"))
+
+cat("Train:", nrow(train_raw), " Test:", nrow(test_raw),
+    " Total:", nrow(train_raw) + nrow(test_raw), "\n")
+stopifnot(nrow(train_raw) + nrow(test_raw) == 20925)
+```
+
+## Leakage check
+
+`train_raw` is Milestone 2's full integrated file (128 columns), so the raw food-insecurity survey items are still present at this point - that's expected. `leakage_vars` lists everything that must never reach the model; the actual check happens in 1.3, once predictors are selected.
+
+```{r leakage-check}
+leakage_vars <- c(
+  "WorriedFoodWouldRunOutCode", "UnableToEatHealthyFoodCode", "AteFewFoodsCode",
+  "SkippedMealCode", "AteLessCode", "RanOutOfFoodCode", "HungryButDidNotEatCode",
+  "WholeDayWithoutEatingCode", "AdultHungerCode", "ChildHungerCode",
+  "FewFoodsDays", "SkippedMealDays", "AteLessDays", "RanOutDays",
+  "FI_Score", "n_fi_answered"
+)
+
+cat(ncol(train_raw), "columns loaded; leakage check runs once predictors are selected in 1.3.\n")
+```
+
+# 1.3 Predictor Set
+
+The eight predictors are already engineered in Milestone 2 and reused as-is (`Income_Log` is `log1p()`-transformed income, `Income_PerCapita` is income divided by household size).
+
+```{r predictor-set}
+predictor_vars <- c("ComparativeIncomeCode", "GeoTypeCode", "HouseholdSize",
+                    "Income_Log", "Income_PerCapita", "ElectricityAccessCode",
+                    "SocialGrantRecipients", "MainToiletCode")
+stopifnot(all(predictor_vars %in% names(train_raw)))
+stopifnot(length(intersect(predictor_vars, leakage_vars)) == 0)  # predictor list is leakage-free
+
+# Relabel tier levels to underscores so tidymodels' .pred_<level> columns don't contain spaces.
+tier_lookup <- tibble(
+  level = c("Food_secure", "Food_insecure", "Severely_food_insecure"),
+  label = c("Food secure", "Food insecure", "Severely food insecure")
+)
+
+prep_df <- function(df) {
+  df %>%
+    mutate(
+      Vulnerability_Tier = factor(Vulnerability_Tier, 
+                                  levels = tier_lookup$label, 
+                                  labels = tier_lookup$level),
+      Food_Insecure_Binary = factor(Food_Insecure_Binary, 
+                                    levels = c("Secure", "Insecure")),
+      ComparativeIncomeCode = factor(ComparativeIncomeCode, 
+                                     levels = 1:5, 
+                                     ordered = TRUE),
+      GeoTypeCode = factor(GeoTypeCode, 
+                           levels = 1:3, 
+                           labels = c("Urban", "Traditional_Tribal", "Farms")),
+      ElectricityAccessCode = factor(ElectricityAccessCode, 
+                                     levels = c(1, 2),
+                                     labels = c("Yes", "No")),
+      MainToiletCode = factor(MainToiletCode)
+    ) %>%
+    select(HouseholdID, Vulnerability_Tier, Food_Insecure_Binary, all_of(predictor_vars))
+}
+
+train <- prep_df(train_raw)
+test  <- prep_df(test_raw)
+
+present_leaks <- intersect(leakage_vars, names(train))
+stopifnot(length(present_leaks) == 0)  # final predictor set is leakage-free
+
+cat("Train class counts:\n"); print(table(train$Vulnerability_Tier))
+
+cat("\nGeoTypeCode is 3 levels (Urban / Traditional-Tribal / Farms), corrected from the binary\n", 
+    "urban/rural split Milestone 2's original encoding table assumed.\n")
+```
+
+# 1.4 Candidate Approaches and Assumptions
+
+Three techniques, per the brief's requirement for at least two defensible candidates:
+
+1.  **Regularised multinomial logistic regression** (`glmnet`) - the interpretable baseline. Assumes linearity in the log-odds; `Income_Log` already addresses the raw-income skew that would otherwise violate this. A VIF-style check below looks at redundancy between `ComparativeIncomeCode` and the two income features, since all three relate to household income.
+2.  **Decision tree** (`rpart`) - gives directly readable rules for the interpretability discussion, at the cost of instability. Treated as an interpretability option, not the performance candidate.
+3.  **Random forest** (`ranger`) - the performance benchmark. No scaling or dummy-encoding needed for tree-based models.
+
+```{r multicollinearity-check}
+vif_check <- train %>%
+  mutate(CompIncomeNum = as.numeric(ComparativeIncomeCode)) %>%
+  filter(!is.na(CompIncomeNum), !is.na(Income_Log), !is.na(Income_PerCapita))
+
+m <- lm(CompIncomeNum ~ Income_Log + Income_PerCapita, data = vif_check)
+r2 <- summary(m)$r.squared
+
+cat("R-squared of ComparativeIncomeCode on the two income features:", 
+    round(r2, 3), "\n")
+cat("VIF-equivalent (1 / (1 - R2)):", 
+    round(1 / (1 - r2), 2), "\n")
+# VIF above ~5 is the usual threshold of concern
+```
+
+# 1.5 Recipes
+
+Linear models need dummy-encoded, normalised predictors; tree-based models handle factors and unscaled numerics natively, so each gets its own recipe.
+
+```{r recipes}
+rec_linear <- recipe(Vulnerability_Tier ~ ., data = train %>% select(-HouseholdID, -Food_Insecure_Binary)) %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_impute_mode(all_nominal_predictors()) %>%
+  step_other(MainToiletCode, threshold = 0.02) %>%
+  step_novel(all_nominal_predictors()) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_zv(all_predictors()) %>%
+  step_normalize(all_numeric_predictors())
+
+rec_tree <- recipe(Vulnerability_Tier ~ ., data = train %>% select(-HouseholdID, -Food_Insecure_Binary)) %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_impute_mode(all_nominal_predictors()) %>%
+  step_other(MainToiletCode, threshold = 0.02) %>%
+  step_novel(all_nominal_predictors())
+```
+
+# 1.6 Model Specifications
+
+```{r specs}
+spec_logistic <- multinom_reg(penalty = tune(), mixture = tune()) %>%
+  set_engine("glmnet") %>%
+  set_mode("classification")
+
+spec_tree <- decision_tree(cost_complexity = tune(), tree_depth = tune(), min_n = tune()) %>%
+  set_engine("rpart") %>%
+  set_mode("classification")
+
+spec_forest <- rand_forest(mtry = tune(), min_n = tune(), trees = 500) %>%
+  set_engine("ranger", importance = "permutation") %>%
+  set_mode("classification")
+
+wf_logistic <- workflow() %>% add_recipe(rec_linear) %>% add_model(spec_logistic)
+wf_tree     <- workflow() %>% add_recipe(rec_tree)   %>% add_model(spec_tree)
+wf_forest   <- workflow() %>% add_recipe(rec_tree)   %>% add_model(spec_forest)
+```
+
+# 1.7 Stratified Cross-Validation and Class Imbalance
+
+Stratified k-fold CV keeps each fold's class mix close to the training set's 69.45/10.55/20.00 split. Class weighting is compared against plain stratification below to assess imbalance directly, rather than just noting it.
+
+```{r cv}
+set.seed(381)
+folds <- vfold_cv(train, v = 5, strata = Vulnerability_Tier)
+print(folds)
+```
+
+```{r class-weight-comparison}
+# Frequency-inverse class weights, for comparison against unweighted stratified CV.
+class_weights <- train %>%
+  count(Vulnerability_Tier) %>%
+  mutate(weight = sum(n) / (n_distinct(Vulnerability_Tier) * n))
+print(class_weights)
+```
+
+# 1.8 Tuning
+
+Tuning grids use space-filling designs (10-15 candidates per model) to keep the 5-fold search within reasonable runtime.
+
+```{r tuning-grids}
+grid_logistic <- grid_space_filling(penalty(), mixture(), size = 12)
+grid_tree <- grid_space_filling(cost_complexity(), tree_depth(), min_n(), size = 12)
+grid_forest <- grid_space_filling(mtry(range = c(2, 8)), min_n(), size = 10)
+
+metrics_tune <- metric_set(roc_auc, accuracy, bal_accuracy)
+```
+
+```{r tune-logistic}
+set.seed(381)
+tuned_logistic <- tune_grid(
+  wf_logistic, resamples = folds, grid = grid_logistic,
+  metrics = metrics_tune, control = control_grid(save_pred = TRUE)
+)
+show_best(tuned_logistic, metric = "roc_auc")
+```
+
+```{r tune-tree}
+set.seed(381)
+tuned_tree <- tune_grid(
+  wf_tree, resamples = folds, grid = grid_tree,
+  metrics = metrics_tune, control = control_grid(save_pred = TRUE)
+)
+show_best(tuned_tree, metric = "roc_auc")
+```
+
+```{r tune-forest}
+set.seed(381)
+tuned_forest <- tune_grid(
+  wf_forest, resamples = folds, grid = grid_forest,
+  metrics = metrics_tune, control = control_grid(save_pred = TRUE)
+)
+show_best(tuned_forest, metric = "roc_auc")
+```
+
+Hyper parameters are selected on macro-averaged `roc_auc`, agreed as the Day-1 placeholder in the work split. Accuracy is reported alongside since the 69.45% majority class makes accuracy alone misleading. Person B's Task 2 makes the final metric call for model selection; if that differs, only the `select_best()` calls below need to change.
+
+# 1.9 Finalise and Fit on Full Training Set
+
+```{r finalize}
+best_logistic <- select_best(tuned_logistic, metric = "roc_auc")
+best_tree <- select_best(tuned_tree,     metric = "roc_auc")
+best_forest <- select_best(tuned_forest,   metric = "roc_auc")
+
+final_logistic <- finalize_workflow(wf_logistic, best_logistic) %>% fit(data = train)
+final_tree <- finalize_workflow(wf_tree, best_tree) %>% fit(data = train)
+final_forest <- finalize_workflow(wf_forest, best_forest) %>% fit(data = train)
+```
+
+# 1.10 Model Parameter Table
+
+```{r parameter-table}
+param_table <- tibble(
+  Technique          = c("Regularised multinomial logistic regression", "Decision tree", "Random forest"),
+  Engine = c("glmnet", "rpart", "ranger"),
+  Final_Hyperparams = c(sprintf("penalty = %.4g, mixture = %.3f", 
+                                best_logistic$penalty, best_logistic$mixture), 
+                        sprintf("cost_complexity = %.4g, tree_depth = %d, 
+                                min_n = %d", 
+                                best_tree$cost_complexity, 
+                                best_tree$tree_depth, best_tree$min_n), 
+                        sprintf("mtry = %d, min_n = %d, trees = 500", 
+                                best_forest$mtry, best_forest$min_n)),
+  Resampling = "5-fold CV, stratified on Vulnerability_Tier",
+  Seed = 381,
+  Optimised_For = "roc_auc (macro, provisional - confirm with Person B)"
+)
+kable(param_table)
+write_csv(param_table, file.path(OUT_DIR, "model_parameter_table.csv"))
+```
+
+# 1.11 Predictions Hand-off (Person B)
+
+Both held-out test predictions and cross-validated training-fold predictions are exported, so Person B can compare CV performance against test performance for over fitting.
+
+```{r predictions-handoff}
+test_preds <- bind_rows(
+  augment(final_logistic, test) %>% mutate(model = "logistic"),
+  augment(final_tree, test) %>% mutate(model = "tree"),
+  augment(final_forest, test) %>% mutate(model = "forest")
+) %>%
+  select(HouseholdID, model, Vulnerability_Tier, starts_with(".pred"))
+
+cv_preds <- bind_rows(
+  collect_predictions(tuned_logistic, parameters = best_logistic) %>% 
+    mutate(model = "logistic"),
+  collect_predictions(tuned_tree, parameters = best_tree) %>% 
+    mutate(model = "tree"),
+  collect_predictions(tuned_forest, parameters = best_forest) %>% 
+    mutate(model = "forest")
+)
+
+write_csv(test_preds, file.path(OUT_DIR, "test_predictions_for_personB.csv"))
+write_csv(cv_preds, file.path(OUT_DIR, "cv_predictions_for_personB.csv"))
+write_csv(tier_lookup, file.path(OUT_DIR, "tier_label_lookup.csv"))
+
+print(list.files(OUT_DIR, pattern = "personB|lookup"))
+```
+
+# 1.12 Model and Schema Hand-off (Person C)
+
+Person C's Shiny app needs the fitted models and a schema of what a valid input row looks like, so input validation can be built without guessing column names, types or ranges.
+
+```{r workflows-handoff}
+saveRDS(final_logistic, file.path(OUT_DIR, "final_workflow_logistic.rds"))
+saveRDS(final_tree,     file.path(OUT_DIR, "final_workflow_tree.rds"))
+saveRDS(final_forest,   file.path(OUT_DIR, "final_workflow_forest.rds"))
+
+input_schema <- tibble(
+  variable = predictor_vars,
+  r_type = c("ordered factor (1-5)", "factor (Urban/Traditional_Tribal/Farms)", 
+             "numeric", "numeric (log1p of income)", "numeric (Rand per person)", 
+             "factor (Yes/No)", "numeric (count)", "factor (1-12)"),
+  valid_range = c("1 to 5; 9 = Unspecified -> reject/flag", "1, 2 or 3 only", 
+                  "1 to 25; 0 is invalid -> reject; 8 and 9 ARE valid, do not reject", 
+                  "derived from income, not user-entered directly", 
+                  "derived from income and household size, not user-entered directly", 
+                  "1 or 2; 9 = Unspecified -> reject/flag", 
+                  "0 upward; 99 = Unspecified -> reject/flag", 
+                  "1 to 12; 99 = Unspecified -> reject/flag"),
+  missing_action = "flag and either impute (median/mode, matching the recipes above) or reject per Person C's validation design"
+)
+write_csv(input_schema, file.path(OUT_DIR, "input_schema_for_personC.csv"))
+kable(input_schema)
+```
+
+# 1.13 Reproducibility Notes
+
+For the final repository, split this notebook into `01_prepare.R` (1.2-1.3), `02_model.R` (1.4-1.9) and `03_export.R` (1.10-1.12) once the modelling choices are locked in with Person B. Wrap the project with `renv::init()` and commit `renv.lock` so package versions are reproducible. All random steps use `seed = 381`, matching Milestone 2.
