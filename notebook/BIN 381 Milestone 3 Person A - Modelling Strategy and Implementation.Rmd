@@ -321,6 +321,63 @@ write_csv(input_schema, file.path(OUT_DIR, "input_schema_for_personC.csv"))
 kable(input_schema)
 ```
 
-# 1.13 Reproducibility Notes
+# 1.13 Binary Fallback Model (App Interface Fix)
 
-For the final repository, split this notebook into `01_prepare.R` (1.2-1.3), `02_model.R` (1.4-1.9) and `03_export.R` (1.10-1.12) once the modelling choices are locked in with Person B. Wrap the project with `renv::init()` and commit `renv.lock` so package versions are reproducible. All random steps use `seed = 381`, matching Milestone 2.
+Person C's app (`app/R/score.R`) was built against a binary classifier with a single `.pred_insecure` probability column, before the 3-tier target was finalised as primary. Rather than wait on an app rewrite, a second model is fitted here on `Food_Insecure_Binary` - already in the data set as the documented fallback target - with its factor levels relabelled so the predicted column lands on exactly `.pred_insecure`. The app can use this unchanged. The 3-tier models above remain primary for the report and for Person B's evaluation.
+
+```{r binary-prep}
+binary_lookup <- tibble(level = c("secure", "insecure"), 
+                        label = c("Secure", "Insecure")) 
+
+train_binary <- train %>%   
+  mutate(Food_Insecure_Binary = factor(Food_Insecure_Binary,
+                                       levels = binary_lookup$label, 
+                                       labels = binary_lookup$level)) 
+
+test_binary <- test %>%   
+  mutate(Food_Insecure_Binary = factor(Food_Insecure_Binary,
+                                       levels = binary_lookup$label, 
+                                       labels = binary_lookup$level))
+```
+
+```{r binary-recipe-spec}
+rec_binary <- recipe(Food_Insecure_Binary ~ .,
+                     data = train_binary %>% select(-HouseholdID, -Vulnerability_Tier)) %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_impute_mode(all_nominal_predictors()) %>%
+  step_other(MainToiletCode, threshold = 0.02) %>%
+  step_novel(all_nominal_predictors()) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_zv(all_predictors()) %>%
+  step_normalize(all_numeric_predictors())
+
+spec_binary <- logistic_reg(penalty = tune(), mixture = tune()) %>%
+  set_engine("glmnet") %>%
+  set_mode("classification")
+
+wf_binary <- workflow() %>% add_recipe(rec_binary) %>% add_model(spec_binary)
+```
+
+```{r binary-tune-finalize}
+set.seed(381)
+folds_binary <- vfold_cv(train_binary, v = 5, strata = Food_Insecure_Binary)
+grid_binary <- grid_space_filling(penalty(), mixture(), size = 8)
+
+tuned_binary <- tune_grid(
+  wf_binary, resamples = folds_binary, grid = grid_binary,
+  metrics = metric_set(roc_auc, accuracy, bal_accuracy),
+  control = control_grid(save_pred = TRUE)
+)
+show_best(tuned_binary, metric = "roc_auc")
+
+best_binary <- select_best(tuned_binary, metric = "roc_auc")
+final_binary <- finalize_workflow(wf_binary, best_binary) %>% fit(data = train_binary)
+```
+
+```{r binary-export}
+pred_check <- predict(final_binary, new_data = head(test_binary, 1), type = "prob")
+stopifnot(".pred_insecure" %in% names(pred_check))
+
+saveRDS(final_binary, file.path(OUT_DIR, "final_workflow_binary.rds"))
+cat("Binary fallback model exported. Columns:", paste(names(pred_check), collapse = ", "), "\n")
+```
