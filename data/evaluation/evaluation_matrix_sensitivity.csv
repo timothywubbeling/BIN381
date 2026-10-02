@@ -1,0 +1,5 @@
+model,chosen_weights,equal_weights,performance_only
+Binary logistic (glmnet),4.46,4.47,4.2
+Random forest (ranger),4.04,4.07,4.85
+Multinomial logistic (glmnet),3.92,3.95,4.18
+Decision tree (rpart),3.58,3.63,3.7

@@ -1,0 +1,5 @@
+model,threshold_f2,threshold_recall80
+binary,0.14,0.24
+forest,0.12000000000000001,0.22999999999999998
+logistic,0.16,0.22999999999999998
+tree,0.11,0.19
