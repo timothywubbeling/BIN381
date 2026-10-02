@@ -1,0 +1,877 @@
+---
+title: "BIN381 Milestone 3 - Person B: Model Evaluation and Business Interpretation"
+author: "Rudi Jan du Plessis - Group P1"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+This notebook covers Task 2 (technical evaluation and model comparison) and Task 3 (interpretation and business evaluation). It starts from Person A's hand-off in `data/modelling/` and does not refit or retune any model. Every number in the Task 2 and Task 3 sections of the report comes from this notebook, and the tables Person C needs (threshold, subgroup performance, monitoring baseline) are written to `data/evaluation/`.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.width = 8, fig.height = 4.5, dpi = 150,
+                      fig.path = "data/evaluation/figures/")   # PNGs kept for the report (relative to the project root)
+# Paths below are relative to the project root, as in Person A's notebook.
+if (basename(getwd()) == "notebook") knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+```{r packages}
+library(tidyverse)
+library(tidymodels)
+library(glmnet)
+library(ranger)
+library(rpart)
+library(knitr)
+tidymodels_prefer()
+
+IN_DIR  <- "data/integrated"
+MOD_DIR <- "data/modelling"
+OUT_DIR <- "data/evaluation"
+dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
+
+set.seed(381)
+
+tiers       <- c("Food_secure", "Food_insecure", "Severely_food_insecure")
+tier_labels <- c("Food secure", "Food insecure", "Severely food insecure")
+prob_cols   <- paste0(".pred_", tiers)
+model_names <- c(logistic = "Multinomial logistic (glmnet)",
+                 tree     = "Decision tree (rpart)",
+                 forest   = "Random forest (ranger)",
+                 binary   = "Binary logistic (glmnet)")
+predictor_vars <- c("ComparativeIncomeCode", "GeoTypeCode", "HouseholdSize",
+                    "Income_Log", "Income_PerCapita", "ElectricityAccessCode",
+                    "SocialGrantRecipients", "MainToiletCode")
+```
+
+# 2.1 Inputs and Consistency Checks
+
+Person A's predictions are loaded with `HouseholdID` as text (the 18-digit IDs lose precision as numbers, DQ-05). Before any metric is computed, the checks below confirm that every model was scored on the same 6,279 test households, that these are exactly the households in `M2_test.rds`, and that the class mix matches the Milestone 2 split.
+
+```{r load-predictions}
+read_preds <- function(path) {
+  read_csv(path, col_types = cols(HouseholdID = col_character(), id = col_character(),
+                                  .default = col_guess())) %>%
+    mutate(Vulnerability_Tier = factor(Vulnerability_Tier, levels = tiers),
+           .pred_class        = factor(.pred_class, levels = tiers))
+}
+test_preds <- read_preds(file.path(MOD_DIR, "test_predictions_for_personB.csv"))
+cv_preds   <- read_preds(file.path(MOD_DIR, "cv_predictions_for_personB.csv"))
+
+train_raw <- readRDS(file.path(IN_DIR, "M2_train.rds"))
+test_raw  <- readRDS(file.path(IN_DIR, "M2_test.rds"))
+
+# Person A's prep_df(), copied unchanged so the binary model sees the same factor coding.
+prep_df <- function(df) {
+  df %>%
+    mutate(
+      Vulnerability_Tier    = factor(Vulnerability_Tier, levels = tier_labels, labels = tiers),
+      Food_Insecure_Binary  = factor(Food_Insecure_Binary, levels = c("Secure", "Insecure")),
+      ComparativeIncomeCode = factor(ComparativeIncomeCode, levels = 1:5, ordered = TRUE),
+      GeoTypeCode           = factor(GeoTypeCode, levels = 1:3,
+                                     labels = c("Urban", "Traditional_Tribal", "Farms")),
+      ElectricityAccessCode = factor(ElectricityAccessCode, levels = c(1, 2), labels = c("Yes", "No")),
+      MainToiletCode        = factor(MainToiletCode)
+    ) %>%
+    select(HouseholdID, Vulnerability_Tier, Food_Insecure_Binary, all_of(predictor_vars))
+}
+train <- prep_df(train_raw)
+test  <- prep_df(test_raw)
+
+checks <- tibble(
+  check = c("Test rows per model",
+            "Same households in every model",
+            "Prediction households = M2_test households",
+            "CV rows per model",
+            "Train + test households",
+            "Probabilities sum to 1 (max deviation)"),
+  result = c(paste(count(test_preds, model)$n, collapse = " / "),
+             as.character(n_distinct(test_preds$HouseholdID) == nrow(test)),
+             as.character(setequal(test_preds$HouseholdID, as.character(test$HouseholdID))),
+             paste(count(cv_preds, model)$n, collapse = " / "),
+             format(nrow(train) + nrow(test), big.mark = ","),
+             signif(max(abs(rowSums(test_preds[prob_cols]) - 1)), 2))
+)
+kable(checks)
+
+stopifnot(all(count(test_preds, model)$n == nrow(test)),
+          setequal(test_preds$HouseholdID, as.character(test$HouseholdID)),
+          nrow(train) + nrow(test) == 20925)
+
+class_mix <- bind_rows(train %>% mutate(set = "Train"), test %>% mutate(set = "Test")) %>%
+  count(set, Vulnerability_Tier) %>%
+  group_by(set) %>% mutate(pct = round(100 * n / sum(n), 2)) %>% ungroup()
+kable(class_mix)
+```
+
+## Binary model predictions
+
+The Shiny app uses Person A's binary fallback model (`final_workflow_binary.rds`), not the three-tier models, so it has to be evaluated here too. Person A did not export test predictions for it, so the saved workflow is used to score the same test households. Nothing is refitted.
+
+```{r binary-predictions}
+final_binary <- readRDS(file.path(MOD_DIR, "final_workflow_binary.rds"))
+
+relabel_binary <- function(df) {
+  df %>% mutate(Food_Insecure_Binary = factor(Food_Insecure_Binary,
+                                              levels = c("Secure", "Insecure"),
+                                              labels = c("secure", "insecure")))
+}
+train_binary <- relabel_binary(train)
+test_binary  <- relabel_binary(test)
+
+binary_test_preds <- predict(final_binary, test_binary, type = "prob") %>%
+  bind_cols(test_binary %>% select(HouseholdID, Vulnerability_Tier, Food_Insecure_Binary))
+
+# The deployed app file must be this same model, otherwise this evaluation describes the wrong thing.
+deployed <- readRDS("models/final_workflow.rds")
+same_as_deployed <- isTRUE(all.equal(
+  predict(deployed, head(test_binary, 200), type = "prob"),
+  predict(final_binary, head(test_binary, 200), type = "prob")))
+cat("models/final_workflow.rds gives the same predictions as final_workflow_binary.rds:",
+    same_as_deployed, "\n")
+```
+
+# 2.2 Metric Set and Why
+
+The test set is 69.45% food secure, so a model that labels every household "Food secure" scores 69.45% accuracy and is useless. Accuracy is therefore reported only for reference. The metrics used to compare models are:
+
+| Metric | Why it is here |
+|---|---|
+| Per-class recall (sensitivity) and specificity | Shows whether the two food-insecure tiers are being found at all. |
+| Macro-averaged recall (balanced accuracy) and macro F1 | Give each tier equal weight, so the 69% majority class cannot carry the score. |
+| Severe-to-secure miss rate | Share of severely food-insecure households predicted as food secure: the costliest error, because these households would not be referred. |
+| Hand-Till multiclass ROC-AUC | Threshold-free ranking quality across all three tiers, and the metric Person A tuned on. |
+| Macro PR-AUC | More informative than ROC-AUC when the positive classes are small (10.55% and 20.00%). |
+| Brier score and calibration plot | The app shows a probability to the user, so the probability itself must be trustworthy, not just the ranking. |
+
+For screening, the question the app answers is "should this household be referred for follow-up?". The three-tier output is therefore also collapsed into an at-risk probability, P(Food insecure) + P(Severely food insecure) = 1 - P(Food secure), and evaluated as a binary screen alongside the binary model.
+
+```{r metric-functions}
+per_class <- function(truth, pred) {
+  map_dfr(tiers, function(k) {
+    tp <- sum(truth == k & pred == k); fn <- sum(truth == k & pred != k)
+    fp <- sum(truth != k & pred == k); tn <- sum(truth != k & pred != k)
+    rec  <- tp / (tp + fn)
+    prec <- if (tp + fp > 0) tp / (tp + fp) else 0     # a class that is never predicted gets precision 0
+    tibble(class = k, n = tp + fn, recall = rec, precision = prec,
+           specificity = tn / (tn + fp),
+           f1 = if (prec + rec > 0) 2 * prec * rec / (prec + rec) else 0)
+  })
+}
+
+tier_metrics <- function(d) {
+  pc <- per_class(d$Vulnerability_Tier, d$.pred_class)
+  P  <- as.matrix(d[prob_cols])
+  severe <- d$Vulnerability_Tier == "Severely_food_insecure"
+  tibble(
+    accuracy          = mean(d$Vulnerability_Tier == d$.pred_class),
+    macro_recall      = mean(pc$recall),
+    macro_f1          = mean(pc$f1),
+    recall_secure     = pc$recall[1],
+    recall_insecure   = pc$recall[2],
+    recall_severe     = pc$recall[3],
+    severe_as_secure  = mean(d$.pred_class[severe] == "Food_secure"),
+    roc_auc_hand_till = roc_auc_vec(d$Vulnerability_Tier, P, estimator = "hand_till"),
+    pr_auc_macro      = pr_auc_vec(d$Vulnerability_Tier, P, estimator = "macro"),
+    brier             = brier_class_vec(d$Vulnerability_Tier, P)
+  )
+}
+
+# Binary screen: truth = at risk (any food insecurity), score = probability of being at risk.
+risk_factor <- function(x) factor(ifelse(x, "at_risk", "secure"), levels = c("at_risk", "secure"))
+
+screen_metrics <- function(at_risk, p, threshold) {
+  flag <- p >= threshold
+  tp <- sum(flag & at_risk); fn <- sum(!flag & at_risk); fp <- sum(flag & !at_risk); tn <- sum(!flag & !at_risk)
+  rec <- tp / (tp + fn); prec <- if (tp + fp > 0) tp / (tp + fp) else 0
+  tibble(threshold   = threshold,
+         recall      = rec,
+         precision   = prec,
+         specificity = tn / (tn + fp),
+         f1          = if (prec + rec > 0) 2 * prec * rec / (prec + rec) else 0,
+         f2          = if (prec + rec > 0) 5 * prec * rec / (4 * prec + rec) else 0,
+         pct_flagged = mean(flag))
+}
+
+screen_auc <- function(at_risk, p) {
+  tibble(roc_auc = roc_auc_vec(risk_factor(at_risk), p),
+         pr_auc  = pr_auc_vec(risk_factor(at_risk), p),
+         brier   = mean((p - at_risk)^2))
+}
+```
+
+# 2.3 Test-Set Performance
+
+## Three-tier models
+
+```{r test-metrics}
+test_metrics <- test_preds %>%
+  group_by(model) %>%
+  group_modify(~ tier_metrics(.x)) %>%
+  ungroup() %>%
+  mutate(model = model_names[model]) %>%
+  arrange(desc(roc_auc_hand_till))
+
+kable(test_metrics, digits = 3,
+      caption = "Test-set metrics, three-tier target (n = 6,279). Class assigned by highest probability.")
+
+no_skill <- tibble(model = "Always 'Food secure' (no-skill baseline)",
+                   accuracy = mean(test$Vulnerability_Tier == "Food_secure"),
+                   macro_recall = 1 / 3, recall_insecure = 0, recall_severe = 0)
+kable(no_skill, digits = 3)
+```
+
+```{r per-class-table}
+per_class_test <- test_preds %>%
+  group_by(model) %>%
+  group_modify(~ per_class(.x$Vulnerability_Tier, .x$.pred_class)) %>%
+  ungroup() %>%
+  mutate(model = model_names[model])
+kable(per_class_test, digits = 3, caption = "Per-class recall, precision, specificity and F1 on the test set")
+```
+
+```{r confusion-matrices, fig.height = 4}
+test_preds %>%
+  count(model, Vulnerability_Tier, .pred_class, .drop = FALSE) %>%
+  group_by(model, Vulnerability_Tier) %>%
+  mutate(row_pct = n / sum(n)) %>%
+  ungroup() %>%
+  mutate(model = factor(model_names[model], levels = model_names[1:3]),
+         Vulnerability_Tier = factor(Vulnerability_Tier, levels = rev(tiers), labels = rev(tier_labels)),
+         .pred_class = factor(.pred_class, levels = tiers, labels = tier_labels)) %>%
+  ggplot(aes(.pred_class, Vulnerability_Tier, fill = row_pct)) +
+  geom_tile(colour = "white") +
+  geom_text(aes(label = sprintf("%d\n(%.0f%%)", n, 100 * row_pct)), size = 3) +
+  scale_fill_gradient(low = "#f7fbff", high = "#2171b5", labels = scales::percent, name = "Row %") +
+  facet_wrap(~ model) +
+  labs(x = "Predicted tier", y = "Actual tier",
+       title = "Test-set confusion matrices (row % = recall for each actual tier)") +
+  theme_minimal(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 25, hjust = 1))
+```
+
+## Screening view (any food insecurity)
+
+```{r screening-auc}
+screen_scores <- bind_rows(
+  test_preds %>% transmute(model, HouseholdID,
+                           at_risk = Vulnerability_Tier != "Food_secure",
+                           p = 1 - .pred_Food_secure),
+  binary_test_preds %>% transmute(model = "binary", HouseholdID,
+                                  at_risk = Food_Insecure_Binary == "insecure",
+                                  p = .pred_insecure)
+)
+
+screen_test_auc <- screen_scores %>%
+  group_by(model) %>%
+  group_modify(~ screen_auc(.x$at_risk, .x$p)) %>%
+  ungroup() %>%
+  mutate(model = model_names[model]) %>%
+  arrange(desc(roc_auc))
+kable(screen_test_auc, digits = 3,
+      caption = "Test-set screening performance: at-risk (Food insecure or Severely food insecure) vs Food secure")
+```
+
+# 2.4 Cross-Validation vs Test, Uncertainty and Overfitting
+
+## Fold-to-fold variability
+
+```{r cv-folds}
+cv_fold_metrics <- cv_preds %>%
+  group_by(model, id) %>%
+  group_modify(~ tier_metrics(.x)) %>%
+  ungroup()
+
+cv_summary <- cv_fold_metrics %>%
+  pivot_longer(-c(model, id), names_to = "metric") %>%
+  group_by(model, metric) %>%
+  summarise(cv_mean = mean(value), cv_sd = sd(value), .groups = "drop")
+
+cv_vs_test <- cv_summary %>%
+  left_join(test_preds %>% group_by(model) %>% group_modify(~ tier_metrics(.x)) %>% ungroup() %>%
+              pivot_longer(-model, names_to = "metric", values_to = "test"),
+            by = c("model", "metric")) %>%
+  filter(metric %in% c("roc_auc_hand_till", "macro_recall", "macro_f1", "recall_severe", "brier")) %>%
+  mutate(gap_test_minus_cv = test - cv_mean,
+         model = model_names[model])
+kable(cv_vs_test, digits = 3,
+      caption = "5-fold CV (mean and SD across folds) against the held-out test set")
+```
+
+## Training-set fit (overfitting check)
+
+The CV-vs-test comparison above shows whether the tuned settings generalise. The training-set fit below shows how much each final model memorised: a large gap between training and test AUC means the model learned noise.
+
+```{r train-fit}
+final_wf <- list(
+  logistic = readRDS(file.path(MOD_DIR, "final_workflow_logistic.rds")),
+  tree     = readRDS(file.path(MOD_DIR, "final_workflow_tree.rds")),
+  forest   = readRDS(file.path(MOD_DIR, "final_workflow_forest.rds"))
+)
+
+train_fit <- imap_dfr(final_wf, function(wf, m) {
+  p <- predict(wf, train, type = "prob")
+  tibble(model = m,
+         train_auc = roc_auc_vec(train$Vulnerability_Tier, as.matrix(p[prob_cols]), estimator = "hand_till"))
+}) %>%
+  bind_rows(tibble(model = "binary",
+                   train_auc = roc_auc_vec(train_binary$Food_Insecure_Binary,
+                                           predict(final_binary, train_binary, type = "prob")$.pred_secure))) %>%
+  left_join(bind_rows(
+    test_metrics %>% transmute(model = names(model_names)[match(model, model_names)], test_auc = roc_auc_hand_till),
+    tibble(model = "binary",
+           test_auc = roc_auc_vec(test_binary$Food_Insecure_Binary, binary_test_preds$.pred_secure))),
+    by = "model") %>%
+  mutate(gap = train_auc - test_auc, model = model_names[model])
+kable(train_fit, digits = 3,
+      caption = "Training vs test ROC-AUC (Hand-Till for three-tier models; binary AUC for the binary model)")
+```
+
+## Bootstrap confidence intervals on the test set
+
+The test set is resampled 1,000 times with replacement. The same resamples are used for every model, so the difference between two models can be given its own interval. If that interval contains 0, the test set cannot tell the two models apart.
+
+```{r bootstrap}
+set.seed(381)
+B <- 1000
+wide <- test_preds %>%
+  select(HouseholdID, model, Vulnerability_Tier, .pred_class, all_of(prob_cols)) %>%
+  arrange(model, HouseholdID)
+by_model <- split(wide, wide$model)
+n_test <- nrow(test)
+boot_idx <- replicate(B, sample.int(n_test, n_test, replace = TRUE), simplify = FALSE)
+
+boot_one <- function(d, idx) {
+  d <- d[idx, ]
+  pc <- per_class(d$Vulnerability_Tier, d$.pred_class)
+  c(auc = roc_auc_vec(d$Vulnerability_Tier, as.matrix(d[prob_cols]), estimator = "hand_till"),
+    macro_recall = mean(pc$recall))
+}
+boot_res <- imap_dfr(by_model, function(d, m) {
+  map_dfr(seq_len(B), function(b) as_tibble_row(c(model = m, b = b, boot_one(d, boot_idx[[b]]))))
+}) %>% mutate(across(c(b, auc, macro_recall), as.numeric))
+
+boot_ci <- boot_res %>%
+  pivot_longer(c(auc, macro_recall), names_to = "metric") %>%
+  group_by(model, metric) %>%
+  summarise(estimate_mean = mean(value),
+            ci_low = quantile(value, 0.025), ci_high = quantile(value, 0.975), .groups = "drop") %>%
+  mutate(model = model_names[model])
+kable(boot_ci, digits = 3, caption = "95% bootstrap intervals on the test set (1,000 resamples)")
+
+boot_diff <- boot_res %>%
+  select(model, b, auc) %>%
+  pivot_wider(names_from = model, values_from = auc) %>%
+  transmute(`forest - logistic` = forest - logistic,
+            `forest - tree`     = forest - tree,
+            `logistic - tree`   = logistic - tree) %>%
+  pivot_longer(everything(), names_to = "comparison") %>%
+  group_by(comparison) %>%
+  summarise(mean_diff = mean(value), ci_low = quantile(value, 0.025),
+            ci_high = quantile(value, 0.975), pct_resamples_positive = mean(value > 0))
+kable(boot_diff, digits = 3, caption = "Paired bootstrap difference in Hand-Till ROC-AUC")
+write_csv(boot_diff, file.path(OUT_DIR, "bootstrap_diff_3tier_auc.csv"))
+```
+
+The same paired test is repeated for the screening AUC, so the deployed binary model is compared directly with the other models.
+
+```{r bootstrap-screening}
+screen_by_model <- screen_scores %>% arrange(model, HouseholdID) %>% split(.$model)
+stopifnot(all(map_lgl(screen_by_model, ~ identical(.x$HouseholdID, screen_by_model$binary$HouseholdID))))
+
+boot_screen <- map_dfr(seq_len(B), function(b) {
+  idx <- boot_idx[[b]]
+  map_dfr(screen_by_model, ~ tibble(auc = roc_auc_vec(risk_factor(.x$at_risk[idx]), .x$p[idx])), .id = "model") %>%
+    mutate(b = b)
+})
+boot_screen_diff <- boot_screen %>%
+  pivot_wider(names_from = model, values_from = auc) %>%
+  transmute(`forest - binary` = forest - binary,
+            `forest - logistic` = forest - logistic,
+            `binary - logistic` = binary - logistic) %>%
+  pivot_longer(everything(), names_to = "comparison") %>%
+  group_by(comparison) %>%
+  summarise(mean_diff = mean(value), ci_low = quantile(value, 0.025),
+            ci_high = quantile(value, 0.975), pct_resamples_positive = mean(value > 0))
+kable(boot_screen_diff, digits = 3, caption = "Paired bootstrap difference in screening ROC-AUC (at risk vs food secure)")
+write_csv(boot_screen_diff, file.path(OUT_DIR, "bootstrap_diff_screen_auc.csv"))
+```
+
+# 2.5 Decision Threshold
+
+Assigning each household to its highest-probability tier hides the food-insecure households. The probability of "Food secure" starts at around 0.69 for a typical household, so the minority tiers rarely win. For screening, the app instead compares the at-risk probability with a referral threshold.
+
+The threshold is chosen on the **cross-validation predictions** (training folds only), never on the test set, so the test result stays an honest estimate.
+
+Two rules were compared:
+
+* **F2-optimal**: weights recall twice as heavily as precision, the usual choice when a miss costs more than a false alarm.
+* **80% recall at the fewest referrals**: the highest threshold that still finds at least 80% of at-risk households in cross-validation.
+
+Both reflect that missing a food-insecure household costs more than a false alarm. The household is not followed up, while a false alarm costs one review by an official. The deciding factor is workload. Business Objective 2 is about targeting *limited* resources, and a screen that refers almost every household does not prioritise anything. The 80% recall rule is used, and the F2 result is reported to show why it was rejected.
+
+```{r cv-binary}
+# Out-of-fold predictions for the binary model, from its own 5 folds (same seed and strata as Person A).
+set.seed(381)
+folds_binary <- vfold_cv(train_binary, v = 5, strata = Food_Insecure_Binary)
+wf_binary_unfitted <- workflow() %>%
+  add_recipe(extract_preprocessor(final_binary)) %>%
+  add_model(extract_spec_parsnip(final_binary))
+cv_binary <- fit_resamples(wf_binary_unfitted, folds_binary,
+                           control = control_resamples(save_pred = TRUE))
+cv_binary_preds <- collect_predictions(cv_binary)
+cv_binary_auc <- collect_metrics(cv_binary, summarize = FALSE) %>%
+  filter(.metric == "roc_auc") %>%
+  summarise(cv_mean = mean(.estimate), cv_sd = sd(.estimate))
+
+cv_screen <- bind_rows(
+  cv_preds %>% transmute(model, at_risk = Vulnerability_Tier != "Food_secure", p = 1 - .pred_Food_secure),
+  cv_binary_preds %>% transmute(model = "binary", at_risk = Food_Insecure_Binary == "insecure", p = .pred_insecure)
+)
+```
+
+```{r threshold-choice}
+grid <- seq(0.05, 0.80, by = 0.01)
+threshold_curves <- cv_screen %>%
+  group_by(model) %>%
+  group_modify(~ map_dfr(grid, function(t) screen_metrics(.x$at_risk, .x$p, t))) %>%
+  ungroup()
+
+chosen <- threshold_curves %>%
+  group_by(model) %>%
+  summarise(threshold_f2 = threshold[which.max(f2)],
+            threshold_recall80 = max(threshold[recall >= 0.80]))
+kable(chosen, caption = "Thresholds chosen on cross-validation predictions")
+
+threshold_curves %>%
+  filter(model %in% c("logistic", "forest", "binary")) %>%
+  select(model, threshold, recall, precision, pct_flagged, f2) %>%
+  pivot_longer(c(recall, precision, pct_flagged, f2)) %>%
+  mutate(model = model_names[model]) %>%
+  ggplot(aes(threshold, value, colour = name)) +
+  geom_line(linewidth = 0.8) +
+  geom_vline(data = chosen %>% filter(model %in% c("logistic", "forest", "binary")) %>%
+               mutate(model = model_names[model]),
+             aes(xintercept = threshold_recall80), linetype = 2) +
+  facet_wrap(~ model) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Referral threshold on at-risk probability", y = NULL, colour = NULL,
+       title = "Threshold trade-off on cross-validation predictions (dashed line = chosen: 80% recall)") +
+  theme_minimal(base_size = 10) + theme(legend.position = "bottom")
+```
+
+```{r threshold-on-test}
+screen_test_at_threshold <- screen_scores %>%
+  left_join(chosen, by = "model") %>%
+  group_by(model) %>%
+  group_modify(~ bind_rows(
+    screen_metrics(.x$at_risk, .x$p, .x$threshold_recall80[1]) %>% mutate(rule = "80% recall (CV) - chosen"),
+    screen_metrics(.x$at_risk, .x$p, .x$threshold_f2[1]) %>% mutate(rule = "F2-optimal (CV) - rejected"),
+    screen_metrics(.x$at_risk, .x$p, 0.5) %>% mutate(rule = "Default 0.5"))) %>%
+  ungroup() %>%
+  mutate(model = model_names[model]) %>%
+  relocate(model, rule)
+kable(screen_test_at_threshold, digits = 3,
+      caption = "Screening performance on the TEST set at thresholds fixed on the CV predictions")
+
+# Severely food-insecure households are the ones that must not be missed.
+severe_caught <- screen_scores %>%
+  left_join(test_preds %>% distinct(HouseholdID, Vulnerability_Tier), by = "HouseholdID") %>%
+  left_join(chosen, by = "model") %>%
+  filter(Vulnerability_Tier == "Severely_food_insecure") %>%
+  group_by(model) %>%
+  summarise(severe_households = n(), severe_flagged = mean(p >= threshold_recall80)) %>%
+  mutate(model = model_names[model])
+kable(severe_caught, digits = 3, caption = "Share of severely food-insecure test households flagged at the chosen (80% recall) threshold")
+write_csv(severe_caught, file.path(OUT_DIR, "severe_flagged.csv"))
+```
+
+# 2.6 Calibration
+
+```{r calibration, fig.height = 4}
+calib <- screen_scores %>%
+  group_by(model) %>%
+  mutate(bin = ntile(p, 10)) %>%
+  group_by(model, bin) %>%
+  summarise(mean_pred = mean(p), observed = mean(at_risk), n = n(), .groups = "drop")
+
+ece <- calib %>%
+  group_by(model) %>%
+  summarise(ece = sum(n * abs(mean_pred - observed)) / sum(n)) %>%
+  mutate(model = model_names[model])
+write_csv(left_join(screen_test_auc %>% select(model, brier), ece, by = "model"), file.path(OUT_DIR, "calibration.csv"))
+kable(left_join(screen_test_auc %>% select(model, brier), ece, by = "model"), digits = 3,
+      caption = "Calibration of the at-risk probability on the test set (lower is better)")
+
+calib %>%
+  mutate(model = model_names[model]) %>%
+  ggplot(aes(mean_pred, observed)) +
+  geom_abline(linetype = 2, colour = "grey50") +
+  geom_line(colour = "#2171b5") + geom_point(colour = "#2171b5", size = 1.5) +
+  facet_wrap(~ model, nrow = 1) +
+  coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Mean predicted at-risk probability (decile)", y = "Observed share at risk",
+       title = "Reliability plot: points on the dashed line mean the probability can be taken at face value") +
+  theme_minimal(base_size = 9)
+```
+
+# 2.7 Evaluation Matrix and Final Model Selection
+
+```{r training-time}
+time_fit <- function(wf, data) {
+  spec <- workflow() %>% add_recipe(extract_preprocessor(wf)) %>% add_model(extract_spec_parsnip(wf))
+  set.seed(381)
+  unname(system.time(fit(spec, data))["elapsed"])
+}
+train_seconds <- c(
+  logistic = time_fit(final_wf$logistic, train %>% select(-HouseholdID, -Food_Insecure_Binary)),
+  tree     = time_fit(final_wf$tree,     train %>% select(-HouseholdID, -Food_Insecure_Binary)),
+  forest   = time_fit(final_wf$forest,   train %>% select(-HouseholdID, -Food_Insecure_Binary)),
+  binary   = time_fit(final_binary,      train_binary %>% select(-HouseholdID, -Vulnerability_Tier))
+)
+kable(enframe(train_seconds, "model", "seconds_to_fit"), digits = 1)
+```
+
+The matrix brings together the evidence from 2.3 to 2.6 with the non-statistical criteria. All four models are compared on the screening task, because that is the decision the app supports and the only measure on which the binary model and the three-tier models can be compared directly. Each criterion is scored from 5 (best) down to a floor of 1. A model loses points for its distance from the best model, at a fixed rate per criterion, so a difference too small to matter costs almost nothing:
+
+| Criterion | Evidence | Points lost |
+|---|---|---|
+| Discrimination | Test screening ROC-AUC | 1 per 0.01 below the best |
+| Referral efficiency | Precision at the chosen threshold (share of referred households that are really at risk) | 1 per 0.01 below the best |
+| Calibration | Test Brier score of the at-risk probability | 1 per 0.005 above the best |
+| Robustness | Gap between CV and test screening AUC, plus the fold-to-fold SD | 1 per 0.005 above the best |
+| Interpretability | Judgement: can an official see why a household was flagged? | 5 = one odds ratio per factor, 4 = readable but more complex (per-tier coefficients, or a depth-11 tree), 2 = black box that needs post-hoc explanation |
+| Deployment fit | Judgement: does it match the app (one at-risk probability, fast to score, small file)? | 5 = built for the app's interface, 3 = needs the app changed to collapse three tiers |
+
+The training-vs-test gap from 2.4 is shown as evidence but not scored. A random forest always fits its own training data almost perfectly, so that gap overstates its overfitting, while its CV-vs-test gap is small.
+
+```{r evaluation-matrix}
+cv_screen_folds <- bind_rows(
+  cv_preds %>% transmute(model, id, at_risk = Vulnerability_Tier != "Food_secure", p = 1 - .pred_Food_secure),
+  cv_binary_preds %>% transmute(model = "binary", id, at_risk = Food_Insecure_Binary == "insecure", p = .pred_insecure)
+) %>%
+  group_by(model, id) %>%
+  summarise(auc = roc_auc_vec(risk_factor(at_risk), p), .groups = "drop") %>%
+  group_by(model) %>%
+  summarise(cv_screen_auc = mean(auc), cv_screen_auc_sd = sd(auc))
+
+matrix_raw <- tibble(model = c("logistic", "tree", "forest", "binary")) %>%
+  left_join(cv_summary %>% filter(metric == "roc_auc_hand_till") %>% select(model, cv_auc_3tier = cv_mean), by = "model") %>%
+  left_join(test_preds %>% group_by(model) %>% group_modify(~ tier_metrics(.x)) %>% ungroup() %>%
+              select(model, test_auc_3tier = roc_auc_hand_till, macro_recall, recall_insecure_tier = recall_insecure), by = "model") %>%
+  left_join(cv_screen_folds, by = "model") %>%
+  left_join(screen_scores %>% group_by(model) %>% group_modify(~ screen_auc(.x$at_risk, .x$p)) %>% ungroup() %>%
+              select(model, screen_auc = roc_auc, screen_pr_auc = pr_auc, screen_brier = brier), by = "model") %>%
+  left_join(calib %>% group_by(model) %>% summarise(ece = sum(n * abs(mean_pred - observed)) / sum(n)), by = "model") %>%
+  left_join(screen_test_at_threshold %>% filter(str_detect(rule, "chosen")) %>%
+              transmute(model = names(model_names)[match(model, model_names)], threshold, screen_recall = recall,
+                        screen_precision = precision, pct_flagged), by = "model") %>%
+  left_join(train_fit %>% transmute(model = names(model_names)[match(model, model_names)], train_test_gap = gap), by = "model") %>%
+  mutate(cv_test_gap = abs(screen_auc - cv_screen_auc),
+         train_seconds = train_seconds[model],
+         interpretability = c(logistic = 4, tree = 4, forest = 2, binary = 5)[model],
+         deployment_fit   = c(logistic = 3, tree = 3, forest = 3, binary = 5)[model])
+
+points <- function(x, per_point, higher_is_better = TRUE) {
+  gap <- if (higher_is_better) max(x) - x else x - min(x)
+  round(pmax(1, 5 - gap / per_point), 1)
+}
+
+weights <- c(discrimination = 0.25, efficiency = 0.15, calibration = 0.15,
+             robustness = 0.10, interpretability = 0.20, deployment_fit = 0.15)
+
+eval_matrix <- matrix_raw %>%
+  mutate(
+    s_discrimination   = points(screen_auc, 0.01),
+    s_efficiency       = points(screen_precision, 0.01),
+    s_calibration      = points(screen_brier, 0.005, higher_is_better = FALSE),
+    s_robustness       = points(cv_test_gap + cv_screen_auc_sd, 0.005, higher_is_better = FALSE),
+    s_interpretability = interpretability,
+    s_deployment_fit   = deployment_fit,
+    weighted_score = round(weights["discrimination"] * s_discrimination +
+                           weights["efficiency"] * s_efficiency +
+                           weights["calibration"] * s_calibration +
+                           weights["robustness"] * s_robustness +
+                           weights["interpretability"] * s_interpretability +
+                           weights["deployment_fit"] * s_deployment_fit, 2),
+    model = model_names[model]
+  ) %>%
+  arrange(desc(weighted_score))
+
+kable(eval_matrix %>% select(model, cv_auc_3tier, test_auc_3tier, macro_recall, recall_insecure_tier,
+                             cv_screen_auc, cv_screen_auc_sd, screen_auc, screen_pr_auc, threshold,
+                             screen_recall, screen_precision, pct_flagged, screen_brier, ece,
+                             train_test_gap, train_seconds),
+      digits = 3, caption = "Evaluation matrix - evidence (test set unless marked CV; three-tier columns are blank for the binary model)")
+kable(eval_matrix %>% select(model, starts_with("s_"), weighted_score), digits = 2,
+      caption = paste0("Evaluation matrix - scores (1-5) and weighted decision. Weights: ",
+                       paste(names(weights), scales::percent(weights), sep = " ", collapse = ", ")))
+write_csv(eval_matrix, file.path(OUT_DIR, "evaluation_matrix.csv"))
+
+# Does the decision depend on the weights? Re-score with equal weights and with performance-only weights.
+sensitivity <- eval_matrix %>%
+  transmute(model,
+            chosen_weights = weighted_score,
+            equal_weights  = round(rowMeans(across(starts_with("s_"))), 2),
+            performance_only = round((s_discrimination + s_efficiency + s_calibration + s_robustness) / 4, 2))
+kable(sensitivity, caption = "Weighted score under alternative weightings")
+write_csv(sensitivity, file.path(OUT_DIR, "evaluation_matrix_sensitivity.csv"))
+```
+
+# 3.1 Drivers of Food Insecurity
+
+## Observed rates
+
+Before any model, the share of households with any food insecurity at each level of the hypothesis variables, on the full modelling set. These are raw associations: they do not adjust for income or anything else.
+
+```{r observed-rates}
+full <- bind_rows(train_binary, test_binary)
+rate_by <- function(data = full, var) {
+  data %>%
+    filter(!is.na(.data[[var]])) %>%
+    mutate(level = as.character(.data[[var]])) %>%
+    group_by(variable = var, level) %>%
+    summarise(households = n(), pct_food_insecure = round(100 * mean(Food_Insecure_Binary == "insecure"), 1),
+              .groups = "drop")
+}
+observed_rates <- bind_rows(
+  rate_by(var = "ComparativeIncomeCode"), rate_by(var = "GeoTypeCode"), rate_by(var = "ElectricityAccessCode"),
+  full %>% mutate(grants = ifelse(SocialGrantRecipients > 0, "1+ recipients", "None")) %>% rate_by(var = "grants"),
+  full %>% mutate(size = cut(HouseholdSize, c(0, 2, 4, 6, Inf), labels = c("1-2", "3-4", "5-6", "7+"))) %>% rate_by(var = "size"),
+  rate_by(var = "MainToiletCode")
+)
+kable(observed_rates, caption = "Share of households with any food insecurity, by level (n = 20,925)")
+write_csv(observed_rates, file.path(OUT_DIR, "observed_rates.csv"))
+```
+
+## Odds ratios
+
+The odds ratios below come from an unpenalised binary logistic regression (any food insecurity vs food secure) fitted on the training set. Person A's tuned penalty was effectively zero (8.1e-10), so the penalised and unpenalised coefficients are practically the same, and the unpenalised fit adds standard errors and confidence intervals. `Income_PerCapita` is left out of this model on purpose. Total income and household size are both already in the model, and per-capita income is their ratio, so keeping it would make the household-size coefficient meaningless (H3 asks about household size at a fixed total income).
+
+```{r odds-ratios}
+or_data <- train_binary %>%
+  mutate(ComparativeIncomeCode = factor(ComparativeIncomeCode, ordered = FALSE),
+         MainToiletCode = fct_lump_prop(MainToiletCode, 0.02, other_level = "Other"))
+
+or_model <- glm(Food_Insecure_Binary ~ ComparativeIncomeCode + GeoTypeCode + HouseholdSize +
+                  Income_Log + ElectricityAccessCode + SocialGrantRecipients + MainToiletCode,
+                data = or_data, family = binomial())
+
+odds_ratios <- broom::tidy(or_model, conf.int = TRUE, exponentiate = TRUE) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(across(c(estimate, conf.low, conf.high), ~ round(.x, 3)),
+         p.value = signif(p.value, 3))
+kable(odds_ratios %>% select(term, odds_ratio = estimate, conf.low, conf.high, p.value),
+      caption = sprintf("Odds ratios for any food insecurity (n = %s complete training households). Reference levels: income 'much higher' (1), Urban, has electricity, toilet code %s.",
+                        format(nobs(or_model), big.mark = ","), levels(or_data$MainToiletCode)[1]))
+write_csv(odds_ratios, file.path(OUT_DIR, "odds_ratios.csv"))
+```
+
+## Permutation importance
+
+Each predictor is shuffled on the test set (5 repeats), and the drop in ROC-AUC is recorded. A large drop means the model relies on that predictor. This is model-agnostic, so the same yardstick applies to the logistic models and the forest.
+
+```{r permutation-importance}
+perm_importance <- function(predict_fun, data, truth, score_fun, vars, reps = 5) {
+  base <- score_fun(truth, predict_fun(data))
+  map_dfr(vars, function(v) {
+    drops <- map_dbl(seq_len(reps), function(r) {
+      shuffled <- data
+      shuffled[[v]] <- sample(shuffled[[v]])
+      base - score_fun(truth, predict_fun(shuffled))
+    })
+    tibble(variable = v, auc_drop = mean(drops), auc_drop_sd = sd(drops))
+  })
+}
+auc3 <- function(truth, P) roc_auc_vec(truth, as.matrix(P[prob_cols]), estimator = "hand_till")
+auc2 <- function(truth, p) roc_auc_vec(truth, p$.pred_secure)
+
+set.seed(381)
+importance <- bind_rows(
+  perm_importance(function(d) predict(final_wf$logistic, d, type = "prob"), test,
+                  test$Vulnerability_Tier, auc3, predictor_vars) %>% mutate(model = "logistic"),
+  perm_importance(function(d) predict(final_wf$forest, d, type = "prob"), test,
+                  test$Vulnerability_Tier, auc3, predictor_vars) %>% mutate(model = "forest"),
+  perm_importance(function(d) predict(final_binary, d, type = "prob"), test_binary,
+                  test_binary$Food_Insecure_Binary, auc2, predictor_vars) %>% mutate(model = "binary")
+) %>%
+  group_by(model) %>% mutate(rank = rank(-auc_drop)) %>% ungroup()
+write_csv(importance, file.path(OUT_DIR, "permutation_importance.csv"))
+
+importance %>%
+  mutate(model = model_names[model]) %>%
+  ggplot(aes(auc_drop, reorder(variable, auc_drop))) +
+  geom_col(fill = "#2171b5") +
+  geom_errorbarh(aes(xmin = auc_drop - auc_drop_sd, xmax = auc_drop + auc_drop_sd), height = 0.3) +
+  facet_wrap(~ model) +
+  labs(x = "Drop in test ROC-AUC when the predictor is shuffled", y = NULL,
+       title = "Permutation importance (higher = the model leans on it more)") +
+  theme_minimal(base_size = 10)
+```
+
+## Partial dependence
+
+The partial-dependence plots show how the average at-risk probability changes as one predictor is varied, with the other predictors held at their observed values. Income and household size are varied together with `Income_PerCapita`, so the model never sees an impossible combination such as a high income with a low per-capita income for a one-person household.
+
+```{r partial-dependence, fig.height = 6}
+set.seed(381)
+pd_base <- train_binary %>% slice_sample(n = 1500)
+
+at_risk_prob <- list(
+  binary   = function(d) predict(final_binary, d, type = "prob")$.pred_insecure,
+  logistic = function(d) 1 - predict(final_wf$logistic, d, type = "prob")$.pred_Food_secure,
+  forest   = function(d) 1 - predict(final_wf$forest, d, type = "prob")$.pred_Food_secure
+)
+
+pd_set <- function(d, var, value) {
+  if (var == "Income_Log") {
+    d$Income_Log <- value
+    d$Income_PerCapita <- expm1(value) / d$HouseholdSize
+  } else if (var == "HouseholdSize") {
+    d$Income_PerCapita <- expm1(d$Income_Log) / value
+    d$HouseholdSize <- value
+  } else if (is.factor(d[[var]])) {
+    d[[var]] <- factor(value, levels = levels(d[[var]]), ordered = is.ordered(d[[var]]))
+  } else {
+    d[[var]] <- value
+  }
+  d
+}
+
+pd_grid <- list(
+  Income_Log            = unique(log1p(round(expm1(quantile(train$Income_Log, seq(0.05, 0.95, 0.05), na.rm = TRUE)), -2))),
+  HouseholdSize         = 1:10,
+  SocialGrantRecipients = 0:6,
+  GeoTypeCode           = levels(train$GeoTypeCode),
+  ElectricityAccessCode = levels(train$ElectricityAccessCode),
+  ComparativeIncomeCode = levels(train$ComparativeIncomeCode),
+  MainToiletCode        = names(which(table(train$MainToiletCode) / nrow(train) >= 0.02))
+)
+
+pdp <- imap_dfr(at_risk_prob, function(f, m) {
+  imap_dfr(pd_grid, function(values, var) {
+    map_dfr(values, function(v) tibble(model = m, variable = var, value = as.character(v),
+                                       x_num = suppressWarnings(as.numeric(v)),
+                                       at_risk = mean(f(pd_set(pd_base, var, v)), na.rm = TRUE)))
+  })
+})
+write_csv(pdp, file.path(OUT_DIR, "partial_dependence.csv"))
+
+pdp %>%
+  mutate(model = model_names[model],
+         label = ifelse(variable == "Income_Log",
+                        sprintf("R%s", format(round(expm1(x_num), -2), big.mark = ",", trim = TRUE)), value),
+         x = paste0(label, "___", variable)) %>%   # unique per facet, so each facet keeps its own order
+  group_by(variable) %>% mutate(step = match(value, unique(value))) %>% ungroup() %>%
+  arrange(variable, step) %>%
+  mutate(x = fct_inorder(x)) %>%
+  ggplot(aes(x, at_risk, colour = model, group = model)) +
+  geom_line() + geom_point(size = 1) +
+  facet_wrap(~ variable, scales = "free_x", ncol = 3) +
+  scale_x_discrete(labels = function(l) sub("___.*", "", l)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = NULL, y = "Average at-risk probability", colour = NULL,
+       title = "Partial dependence (income shown as monthly Rand)") +
+  theme_minimal(base_size = 9) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6), legend.position = "bottom")
+```
+
+# 3.2 Subgroup Performance
+
+Recall, false-negative rate and precision for the final screening model at its chosen threshold, by settlement type, income band, household-size band, grant receipt and province. The bands match `R/fairness_check.R` so that Person C's fairness section and this table use the same groups. The intervals are 95% Wilson intervals: a wide interval means the group is too small to judge.
+
+```{r subgroups}
+FINAL_MODEL <- "binary"   # confirmed in the evaluation matrix above; see the report for the reasoning
+FINAL_THRESHOLD <- chosen$threshold_recall80[chosen$model == FINAL_MODEL]
+
+integrated <- readRDS(file.path(IN_DIR, "household_integrated.rds")) %>%
+  transmute(HouseholdID = as.character(HouseholdID), ProvinceCode, HouseholdWeight)
+province_names <- c("Western Cape", "Eastern Cape", "Northern Cape", "Free State", "KwaZulu-Natal",
+                    "North West", "Gauteng", "Mpumalanga", "Limpopo")
+
+final_test <- screen_scores %>%
+  filter(model == FINAL_MODEL) %>%
+  left_join(test %>% mutate(HouseholdID = as.character(HouseholdID)) %>%
+              select(HouseholdID, Vulnerability_Tier, all_of(predictor_vars)), by = "HouseholdID") %>%
+  left_join(integrated, by = "HouseholdID") %>%
+  mutate(flag = p >= FINAL_THRESHOLD,
+         income = expm1(Income_Log),
+         income_band = cut(income, c(-Inf, 2500, 5000, 11500, Inf),
+                           labels = c("< R2,500", "R2,500-5,000", "R5,000-11,500", "> R11,500")),
+         size_band  = cut(HouseholdSize, c(0, 2, 4, 6, Inf), labels = c("1-2", "3-4", "5-6", "7+")),
+         grant_band = ifelse(SocialGrantRecipients > 0, "Receives grants", "No grants"),
+         province   = province_names[ProvinceCode])
+stopifnot(sum(is.na(final_test$ProvinceCode)) == 0)
+
+subgroup_row <- function(d) {
+  tp <- sum(d$flag & d$at_risk); fn <- sum(!d$flag & d$at_risk); fp <- sum(d$flag & !d$at_risk)
+  ci <- if (tp + fn > 0) suppressWarnings(prop.test(tp, tp + fn, correct = FALSE)$conf.int) else c(NA, NA)
+  tibble(households = nrow(d), at_risk = tp + fn,
+         recall = tp / (tp + fn), recall_95_low = ci[1], recall_95_high = ci[2],
+         false_negative_rate = fn / (tp + fn),
+         precision = if (tp + fp > 0) tp / (tp + fp) else NA_real_,
+         pct_flagged = mean(d$flag))
+}
+overall <- subgroup_row(final_test)
+
+subgroups <- map_dfr(c(GeoTypeCode = "GeoTypeCode", income_band = "income_band", size_band = "size_band",
+                       grant_band = "grant_band", province = "province"),
+                     function(g) final_test %>% filter(!is.na(.data[[g]])) %>%
+                       group_by(group = as.character(.data[[g]])) %>%
+                       group_modify(~ subgroup_row(.x)) %>% ungroup() %>% mutate(variable = g)) %>%
+  mutate(gap_vs_overall = recall - overall$recall,
+         within_10_points = abs(gap_vs_overall) <= 0.10) %>%
+  relocate(variable)
+
+kable(overall, digits = 3, caption = sprintf("Overall test performance, %s at threshold %.2f",
+                                              model_names[FINAL_MODEL], FINAL_THRESHOLD))
+kable(subgroups, digits = 3, caption = "Subgroup performance on the test set (hand-off to Person C)")
+write_csv(subgroups, file.path(OUT_DIR, "subgroup_performance.csv"))
+
+# Survey-weighted check: are the test-set results representative of SA households, not just the sample?
+weighted_check <- final_test %>%
+  summarise(unweighted_at_risk_rate = mean(at_risk),
+            weighted_at_risk_rate   = weighted.mean(at_risk, HouseholdWeight),
+            unweighted_recall       = sum(flag & at_risk) / sum(at_risk),
+            weighted_recall         = sum(HouseholdWeight * (flag & at_risk)) / sum(HouseholdWeight * at_risk))
+kable(weighted_check, digits = 3, caption = "Unweighted vs survey-weighted (HouseholdWeight) results")
+write_csv(weighted_check, file.path(OUT_DIR, "survey_weighted_check.csv"))
+```
+
+# 3.3 Hand-off Files
+
+```{r handoff}
+# Test predictions of the final model in the format R/fairness_check.R expects (truth / .pred_insecure).
+final_test %>%
+  transmute(truth = ifelse(at_risk, "insecure", "secure"), .pred_insecure = p,
+            GeoTypeCode, HouseholdSize, SocialGrantRecipients,
+            TotalMonthlyHouseholdIncomeRaw = income, province) %>%
+  write_csv(file.path(OUT_DIR, "final_model_test_predictions.csv"))
+
+# Monitoring baseline for Person C: the numbers a future batch is compared against.
+monitoring_baseline <- tibble(
+  model            = model_names[FINAL_MODEL],
+  threshold        = FINAL_THRESHOLD,
+  test_recall      = overall$recall,
+  test_precision   = overall$precision,
+  test_pct_flagged = overall$pct_flagged,
+  test_roc_auc     = screen_test_auc$roc_auc[screen_test_auc$model == model_names[FINAL_MODEL]],
+  test_brier       = screen_test_auc$brier[screen_test_auc$model == model_names[FINAL_MODEL]],
+  recall_alert_below = round(overall$recall - 0.10, 3)
+)
+kable(monitoring_baseline, digits = 3)
+write_csv(monitoring_baseline, file.path(OUT_DIR, "monitoring_baseline.csv"))
+write_csv(test_metrics, file.path(OUT_DIR, "test_metrics_3tier.csv"))
+write_csv(screen_test_at_threshold, file.path(OUT_DIR, "screening_metrics_test.csv"))
+write_csv(cv_vs_test, file.path(OUT_DIR, "cv_vs_test.csv"))
+write_csv(boot_ci, file.path(OUT_DIR, "bootstrap_ci.csv"))
+write_csv(chosen, file.path(OUT_DIR, "thresholds.csv"))
+list.files(OUT_DIR)
+```
+
+```{r session}
+sessionInfo()
+```

@@ -1,0 +1,2 @@
+model,threshold,test_recall,test_precision,test_pct_flagged,test_roc_auc,test_brier,recall_alert_below
+Binary logistic (glmnet),0.24,0.8071912454403335,0.4187618275209516,0.5891065456282848,0.7358497951436863,0.18034960802316763,0.707

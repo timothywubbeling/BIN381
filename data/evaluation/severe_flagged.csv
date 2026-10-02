@@ -1,0 +1,5 @@
+model,severe_households,severe_flagged
+Binary logistic (glmnet),1256,0.856687898089172
+Random forest (ranger),1256,0.8471337579617835
+Multinomial logistic (glmnet),1256,0.8726114649681529
+Decision tree (rpart),1256,0.8375796178343949
