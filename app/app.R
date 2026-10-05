@@ -5,8 +5,8 @@ library(bslib)
 library(DT)
 library(workflows)   # needed so predict() knows how to use the saved workflow
 
-MODEL_PATH <- "../models/final_workflow.rds"   # Thursday: "../models/final_workflow.rds"
-THRESHOLD  <- 0.35                                    # Thursday: Person B's chosen threshold
+MODEL_PATH <- "../models/final_workflow.rds"   # Person A's binary glmnet (= data/modelling/final_workflow_binary.rds)
+THRESHOLD  <- 0.24                             # Person B: 80%-recall rule on CV predictions (data/evaluation/thresholds.csv)
 
 wf        <- readRDS(MODEL_PATH)
 reference <- readRDS("../models/reference.rds")
@@ -70,6 +70,11 @@ ui <- page_navbar(
       tags$ul(
         tags$li("One survey wave (GHS 2024); self-reported food and income items."),
         tags$li("Person-level files (D01-D03) and the labour-market file (D11) are not used."),
+        tags$li("On test data it finds about 8 in 10 food-insecure households (recall 0.81) and flags",
+                "about 59% of all households for review."),
+        tags$li("It misses more food-insecure households that do not look poor on these inputs:",
+                "recall is about 0.39 for incomes above R11,500 a month and 0.62 for households",
+                "with no grant recipients. A 'Lower risk' result is not proof of food security."),
         tags$li("Accuracy differs between subgroups; see the fairness section of the report.")
       ),
       p(CAVEAT)

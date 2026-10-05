@@ -1,7 +1,7 @@
 # review_monitoring.R  -  the monthly review of monitoring/batch_log.csv
 # Applies the alert rules from the monitoring plan to every logged upload.
 
-BASELINE_PCT_FLAGGED <- 30   # replace with the test-set % flagged higher risk (Thursday)
+BASELINE_PCT_FLAGGED <- 58.9   # test-set % flagged at threshold 0.24 (data/evaluation/monitoring_baseline.csv)
 
 log <- read.csv("monitoring/batch_log.csv")
 

@@ -3,7 +3,31 @@
 # then scores. Contributions use a model-agnostic "swap to typical" check, so this
 # works whether Person A's final model is logistic regression, a tree or a forest.
 
-POSITIVE_COL <- ".pred_insecure"   # agree this name with Person A at kickoff
+POSITIVE_COL <- ".pred_insecure"   # Person A's binary workflow: outcome levels secure / insecure
+
+# Person A's final workflow was trained on the Milestone 2 features, not on raw codes:
+# labelled factors plus two income features derived in M2 (Income_Log = log1p(income),
+# Income_PerCapita = income / household size). This turns the validated raw codes into
+# exactly that format, matching prep_df() in Person A's notebook. Missing values stay
+# NA so the workflow's own imputation steps fill them, as they did in training.
+to_model_input <- function(x) {
+  income <- x$TotalMonthlyHouseholdIncomeRaw
+  data.frame(
+    ComparativeIncomeCode = factor(x$ComparativeIncomeCode, levels = 1:5, ordered = TRUE),
+    GeoTypeCode           = factor(x$GeoTypeCode, levels = 1:3,
+                                   labels = c("Urban", "Traditional_Tribal", "Farms")),
+    HouseholdSize         = as.integer(x$HouseholdSize),
+    Income_Log            = log1p(income),
+    Income_PerCapita      = income / x$HouseholdSize,
+    ElectricityAccessCode = factor(x$ElectricityAccessCode, levels = 1:2, labels = c("Yes", "No")),
+    SocialGrantRecipients = as.integer(x$SocialGrantRecipients),
+    MainToiletCode        = factor(x$MainToiletCode, levels = 1:12)
+  )
+}
+
+predict_risk <- function(wf, x) {
+  predict(wf, new_data = to_model_input(x), type = "prob")[[POSITIVE_COL]]
+}
 
 LABELS <- c(ComparativeIncomeCode = "Income compared with a year ago",
             GeoTypeCode = "Settlement type",
@@ -22,14 +46,16 @@ score_households <- function(wf, validated, reference, threshold) {
   if (!any(ok)) return(d)
 
   x <- d[ok, PREDICTORS, drop = FALSE]
-  p <- predict(wf, new_data = x, type = "prob")[[POSITIVE_COL]]
+  p <- predict_risk(wf, x)
 
   # For each predictor: how much does the probability move if this household had
   # the typical training value instead? Positive = this factor raises the risk.
+  # Swapping happens on the raw inputs, so swapping income (or household size) also
+  # updates the derived income features, keeping explanations in the user's terms.
   contrib <- sapply(PREDICTORS, function(col) {
     x_swap <- x
     x_swap[[col]] <- reference$typical[[col]]
-    p - predict(wf, new_data = x_swap, type = "prob")[[POSITIVE_COL]]
+    p - predict_risk(wf, x_swap)
   })
   contrib <- matrix(contrib, nrow = nrow(x), dimnames = list(NULL, PREDICTORS))
 

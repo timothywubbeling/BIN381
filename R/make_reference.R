@@ -3,6 +3,11 @@
 #   - typical values: the baseline for the "main contributing factors" explanation
 #   - the training distribution: what the drift (PSI) checks compare new uploads against
 # Run it again whenever the model is retrained, with the new training set.
+#
+# Built for the final model (run from the repo root):
+#   source("R/make_reference.R")
+#   saveRDS(make_reference(readRDS("data/integrated/M2_train.rds"), "binary-glmnet-v1"),
+#           "models/reference.rds")
 
 make_reference <- function(train, model_version) {
   preds <- c("ComparativeIncomeCode", "GeoTypeCode", "HouseholdSize",
