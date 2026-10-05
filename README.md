@@ -18,7 +18,7 @@ not an eligibility test** — see *Responsible use* below.
 | `data/modelling/` | Person A: fitted candidate workflows, CV and test predictions, model parameter table, input schema |
 | `data/evaluation/` | Person B: evaluation matrix, metrics, thresholds, calibration, subgroup performance, monitoring baseline, figures |
 | `notebook/` | `BIN 381 Milestone 3 - Full Notebook (Group P1).Rmd` runs Parts A, B and C end to end; the three part notebooks (A modelling, B evaluation, C deployment, monitoring and ethics) with knitted HTML; the Milestone 2 cleaning notebook; `M1_EDA.Rmd` |
-| `models/` | `final_workflow.rds` (the deployed model, a copy of `data/modelling/final_workflow_binary.rds`) and `reference.rds` (training reference for explanations and drift checks) |
+| `models/` | `final_workflow.rds` (the deployed model, a copy of `data/modelling/final_workflow_binary.rds`), `reference.rds` (training reference for explanations and drift checks) and `CHANGELOG.md` (model versions, how to add one and how to roll back) |
 | `app/` | Shiny app: `app.R` plus `R/validate.R`, `R/score.R`, `R/monitor.R` |
 | `R/` | Person C checks: `check_app_matches_model.R`, `fairness_check.R`, `review_monitoring.R`, `make_reference.R` |
 | `tests/` | `messy_households.csv` (deliberately bad input) and `test_validation.R` |
@@ -88,7 +88,8 @@ not an eligibility test** — see *Responsible use* below.
 ## Model version and monitoring
 
 - Current model: binary logistic regression (glmnet), version `binary-glmnet-v1`,
-  fitted by Person A on 1 October 2026 on the GHS 2024 training set.
+  fitted by Person A on 1 October 2026 on the GHS 2024 training set. Version history,
+  how to add a version and how to roll back are in `models/CHANGELOG.md`.
 - Each batch upload appends one row of totals to `monitoring/batch_log.csv`
   (rows not scored, missing-income rate, PSI for income, settlement type and household
   size, share flagged). `R/review_monitoring.R` applies the alert rules.
