@@ -1,0 +1,594 @@
+---
+title: "BIN381 Milestone 2 - Person C: Data Selection & Cleaning"
+author: "Timothy Wubbeling SN 602543 - Group P1"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+Loading Libraries and setting up the file further
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = FALSE)
+# Paths are relative to the project root; this lets the notebook knit from notebook/ too.
+if (basename(getwd()) == "notebook") knitr::opts_knit$set(root.dir = normalizePath(".."))
+#libraries
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tibble)
+library(purrr)
+library(knitr)
+
+RAW_DIR <- "data/raw/"
+CLEAN_DIR <- "data/clean/"
+dir.create(CLEAN_DIR, showWarnings = FALSE, recursive = TRUE)
+```
+
+# Task 1 - Data Selection and Analytical Grain
+
+## Scope decision
+
+The seven files below are retained as the core household-level dataset. The scope is stated firmly here because Milestone 1 left D01-D03 and D08 as "candidates", which is not a decision.
+
+**Included (7 files, household grain):** D04 Dwelling Conditions, D05 Basic Services, D06 Household Energy, D07 Household Wellbeing (focal), D08 Connectivity Access, D09 Household Resources, D10 Mobility Access.
+
+**D08 is added to the Milestone 1 core set.** It is household grain, has 20 940 unique HouseholdIDs, joins to D07 with zero mismatch, and every field is a simple 1/2/9 coded item. Digital exclusion is a recognised dimension of household deprivation, so it extends the vulnerability construct beyond H1-H6 at negligible integration risk.
+
+**D01-D03 (person-level) - excluded.** Grain mismatch: 70 440-70 462 person rows against a 20 940-household analytical unit. Inclusion would require aggregation to household level, which introduces an extra modelling decision (count, mean, or head-of-household value) for every variable retained. None of hypotheses H1-H6 requires a person-level variable. These files also carry the invalid ages documented in DQ-07 (-7, 175), which would need treatment before any aggregate is meaningful. Excluded on grounds of analytical necessity, not difficulty.
+
+**D11 Labour Market - excluded**, confirming Milestone 1: separate QLFS sampling universe, quarterly person-quarter grain, no HouseholdID overlap with the GHS household files.
+
+## Analytical grain
+
+One row = one household. Primary key = `HouseholdID` (stored as **character**, see below). Target grain after cleaning and deduplication = **20 940 households**. No person-level file is joined at row level: the relationship from D01-D03 to the household files is many-to-one, so a row-level join would multiply household records and invalidate every household-level statistic.
+
+# Task 2 - Cleaning and Quality Treatment
+
+## Demonstration of the Precision bug
+
+This is the single most important finding in this section. The Milestone 1 figure of 20 684 unique households is not a survey artefact - it is a data-type defect.
+
+```{r bug-demo}
+# Milestone 1 loader: read.csv() infers HouseholdID as a double.
+d04_native <- read.csv(paste0(RAW_DIR, "D04_Dwelling_Conditions.csv"), stringsAsFactors = FALSE)
+
+class(d04_native$HouseholdID)                       # "numeric"
+format(d04_native$HouseholdID[1], scientific = FALSE)
+n_distinct(d04_native$HouseholdID)                  # 20684 - the WRONG count used in Milestone 1
+
+# Why: an 18-digit ID exceeds double precision. A double can only hold integers
+# exactly up to 2^53 (16 digits), so the last two digits of an 18-digit ID are
+# rounded away and genuinely different households collapse onto the same value.
+2^53                                                # 9007199254740992 - 16 digits
+
+# Read as character instead and the full 18 digits survive.
+max(nchar(as.character(
+  read.csv(paste0(RAW_DIR, "D05_Basic_Services.csv"),
+           colClasses = c(HouseholdID = "character"))$HouseholdID
+)))                                                 # 18
+
+# The control case: D05 was the ONLY file R read as character in Milestone 1, and
+# it was the ONLY file that reported zero duplicate HouseholdIDs. That is the
+# evidence that the "256-272 duplicates per file" finding was caused by the
+# data type, not by the survey design.
+```
+
+## The correct Loader
+
+```{r loader}
+# NOTE: strip.white is deliberately NOT used here. The Province column contains
+# padded values (' Gauteng ') and stripping them silently at load time would hide
+# the problem, leaving no before/after evidence for the Province treatment below.
+# Whitespace is handled explicitly and logged in the Province step instead.
+read_hh <- function(filename) {
+  read.csv(paste0(RAW_DIR, filename),
+           colClasses      = c(HouseholdID = "character"),  # the whole point - see bug-demo
+           stringsAsFactors = FALSE,
+           na.strings      = c("", "NA"))
+}
+
+raw <- list(
+  D04 = read_hh("D04_Dwelling_Conditions.csv"),
+  D05 = read_hh("D05_Basic_Services.csv"),
+  D06 = read_hh("D06_Household_Energy.csv"),
+  D07 = read_hh("D07_Household_Wellbeing.csv"),
+  D08 = read_hh("D08_Connectivity_Access.csv"),
+  D09 = read_hh("D09_Household_Resources.csv"),
+  D10 = read_hh("D10_Mobility_Access.csv")
+)
+
+# map_int / map_chr walk the list of 7 data frames and pull one number (or string)
+# out of each, so this is a 7-row summary of all seven files at once.
+tibble(
+  file       = names(raw),
+  rows       = map_int(raw, nrow),
+  cols       = map_int(raw, ncol),
+  unique_ids = map_int(raw, ~ n_distinct(.x$HouseholdID)),
+  id_class   = map_chr(raw, ~ class(.x$HouseholdID))
+) %>% kable(caption = "Raw files loaded with HouseholdID as character")
+```
+
+Every file now reports **20 940** unique HouseholdIDs, matching the `Data_Dictionary.pdf` entry for `HouseholdID` (Distinct = 20940, "Store as text to avoid float rounding"). The corrected join base is 20 940, not 20 684.
+
+## Quality log
+
+Every Data Quality item needs Problem -\> Treatment -\> Effect -\> Verification. This accumulator is built before any cleaning happens so that each treatment records its own evidence as it runs, rather than the numbers being reconstructed afterwards.
+
+```{r qa-log}
+qa_log <- tibble(
+  file = character(), column = character(), problem = character(),
+  treatment = character(), before = character(), after = character()
+)
+
+# `<<-` assigns to qa_log in the global environment rather than creating a local
+# copy inside the function, so each call appends to the one shared log.
+log_qa <- function(file, column, problem, treatment, before, after) {
+  qa_log <<- add_row(qa_log,
+                     file      = file,
+                     column    = column,
+                     problem   = problem,
+                     treatment = treatment,
+                     before    = as.character(before),
+                     after     = as.character(after))
+  invisible(NULL)
+}
+```
+
+## Column Retention Map
+
+```{r collision-audit}
+# Flatten all seven files into one (file, column) pair per row, then count how
+# many files each column name appears in. Anything above 1 will come back from
+# Person B's join as a .x / .y suffixed pair unless it is resolved here.
+all_cols <- imap_dfr(raw, ~ tibble(file = .y, column = names(.x)))
+
+all_cols %>%
+  count(column, name = "n_files") %>%
+  filter(n_files > 1) %>%
+  arrange(desc(n_files)) %>%
+  left_join(all_cols %>% group_by(column) %>%
+              summarise(files = paste(file, collapse = ", ")), by = "column") %>%
+  kable(caption = "Columns appearing in more than one file - join collision risk")
+```
+
+Resolving them now
+
+```{r retention-map}
+# Shared descriptors: keep one authoritative copy, from D07 (the focal file).
+shared_descriptors <- c("SurveyYear", "Province", "ProvinceCode", "GeoTypeCode", "HouseholdWeight")
+
+drop_map <- list(
+  D04 = c(shared_descriptors, "HouseholdSize"),
+  D05 = shared_descriptors,
+  D06 = shared_descriptors,
+  D07 = character(0),                                   # authoritative - nothing dropped
+  D08 = c(shared_descriptors, "ComputerAssetCode"),     # ComputerAssetCode kept from D09 (asset file)
+  D09 = c("SurveyYear", "Province", "ProvinceCode", "HouseholdWeight",
+          "HouseholdSize", "TotalMonthlyHouseholdIncomeRaw",
+          "SolarPanelAssetCode",                        # kept from D06 (energy file)
+          "SalaryEarnersInHousehold", "TotalGrantRecipients"),  # unusable - see evidence below
+  D10 = shared_descriptors
+)
+# D09 does not have a GeoTypeCode, and is therefore not in the drop list
+```
+
+Evidence for the three contested drops
+
+```{r duplicate-column-evidence}
+# Deduplicate first so each file contributes one row per household - otherwise the
+# comparison would be inflated by the duplicate rows handled in the next step.
+key7 <- raw$D07 %>% distinct(HouseholdID, .keep_all = TRUE)
+key9 <- raw$D09 %>% distinct(HouseholdID, .keep_all = TRUE)
+key4 <- raw$D04 %>% distinct(HouseholdID, .keep_all = TRUE)
+
+# Put the competing copies of HouseholdSize and income side by side on the same
+# household so they can be compared directly.
+cmp <- key7 %>%
+  select(HouseholdID, HS_07 = HouseholdSize, INC_07 = TotalMonthlyHouseholdIncomeRaw) %>%
+  inner_join(key9 %>% select(HouseholdID, HS_09 = HouseholdSize,
+                             INC_09 = TotalMonthlyHouseholdIncomeRaw),
+             by = "HouseholdID") %>%
+  inner_join(key4 %>% select(HouseholdID, HS_04 = HouseholdSize), by = "HouseholdID")
+
+tibble(
+  comparison = c("HouseholdSize D07 vs D09", "HouseholdSize D07 vs D04", "Income D07 vs D09"),
+  matched    = nrow(cmp),
+  disagree   = c(sum(cmp$HS_07  != cmp$HS_09,  na.rm = TRUE),
+                 sum(cmp$HS_07  != cmp$HS_04,  na.rm = TRUE),
+                 sum(cmp$INC_07 != cmp$INC_09, na.rm = TRUE))
+) %>% kable(caption = "Duplicate columns compared on the same household")
+```
+
+D07 is retained as authoritative for `HouseholdSize` and `TotalMonthlyHouseholdIncomeRaw`: it is the focal outcome file, and the duplicate columns disagree on a negligible fraction of households, all of it attributable to sentinel encoding rather than genuine measurement conflict. Milestone 1's finding of 92 HouseholdSize disagreements (DQ-08) was inflated by the same HouseholdID collapse demonstrated above.
+
+## Deduplication
+
+```{r dedup}
+# dup_id_rows   = rows sharing a HouseholdID with an earlier row
+# exact_dup_rows = rows that are byte-identical to an earlier row across ALL columns
+# If these two numbers are equal, every duplicate ID is a full row copy and keeping
+# the first occurrence discards no information.
+dedup_report <- imap_dfr(raw, function(df, id) {
+  tibble(file           = id,
+         rows           = nrow(df),
+         dup_id_rows    = sum(duplicated(df$HouseholdID)),
+         exact_dup_rows = sum(duplicated(df)))
+})
+kable(dedup_report, caption = "Duplicate audit before deduplication")
+
+# This assertion is what justifies .keep_all = TRUE rather than it being arbitrary.
+stopifnot(all(dedup_report$dup_id_rows == dedup_report$exact_dup_rows))
+
+dedup <- map(raw, ~ distinct(.x, HouseholdID, .keep_all = TRUE))
+
+walk2(names(raw), raw, function(id, df) {
+  log_qa(id, "HouseholdID",
+         "Duplicate household records (exact row copies)",
+         "distinct(HouseholdID, .keep_all = TRUE)",
+         nrow(df), nrow(dedup[[id]]))
+})
+
+# All seven files must now agree on the household count.
+stopifnot(all(map_int(dedup, nrow) == 20940))
+```
+
+Only 16 rows drop from D04 and 15 each from D07 and D09; the other four files lose nothing. Milestone 1 reported 256-272 duplicates per file, which was the float-collapse artefact rather than real duplication.
+
+## Province standardisation
+
+`str_to_title()` is deliberately **not** used here - it would turn `KwaZulu-Natal` into `Kwazulu-Natal`. The clean numeric `ProvinceCode` is used as the source of truth instead, which is also the fix recommended on the issues page of `Data_Dictionary.pdf`.
+
+```{r province}
+province_lookup <- tibble(
+  ProvinceCode   = 1:9,
+  Province_clean = c("Western Cape", "Eastern Cape", "Northern Cape",
+                     "Free State", "KwaZulu-Natal", "North West",
+                     "Gauteng", "Mpumalanga", "Limpopo")
+)
+
+# Capture the dirty state before overwriting anything, for the before/after table.
+province_before <- map_int(dedup, ~ n_distinct(.x$Province))
+
+clean_province <- function(df, file_id) {
+  if (!all(c("Province", "ProvinceCode") %in% names(df))) return(df)
+
+  # Before trusting the code over the text, confirm they actually agree once
+  # whitespace and case are normalised. A non-zero count here would mean the two
+  # columns genuinely conflict and the overwrite would be hiding a real problem.
+  mismatch <- df %>%
+    left_join(province_lookup, by = "ProvinceCode") %>%
+    filter(str_squish(str_to_lower(Province)) != str_to_lower(Province_clean)) %>%
+    nrow()
+  cat(sprintf("%s: %d rows where Province text and ProvinceCode disagree after normalisation\n",
+              file_id, mismatch))
+
+  df %>%
+    left_join(province_lookup, by = "ProvinceCode") %>%
+    mutate(Province = Province_clean) %>%
+    select(-Province_clean)
+}
+
+dedup <- imap(dedup, clean_province)
+
+walk(names(dedup), function(id) {
+  log_qa(id, "Province",
+         "Free-text province with padding and inconsistent case (' Gauteng ', 'GAUTENG')",
+         "Rebuilt from the clean numeric ProvinceCode via lookup",
+         province_before[[id]], n_distinct(dedup[[id]]$Province))
+})
+
+tibble(file            = names(dedup),
+       distinct_before = province_before,
+       distinct_after  = map_int(dedup, ~ n_distinct(.x$Province))) %>%
+  kable(caption = "Province text standardisation")
+```
+
+## Text tokens
+
+Three in-scope columns load as character because they mix numeric codes with the literal strings `'Unknown'` and `'not recorded'`.
+
+```{r text-tokens}
+text_cols <- tribble(
+  ~file, ~column,
+  "D05", "TimeToWaterRaw",
+  "D06", "CookingEnergyCode",
+  "D09", "TotalVehicles"
+)
+
+# Show exactly which text values are present and how many of each, before coercing.
+# suppressWarnings is used only for this diagnostic pass; the real coercion below
+# is left un-suppressed so the "NAs introduced by coercion" warning appears in the
+# knitted output as evidence.
+pwalk(text_cols, function(file, column) {
+  x      <- dedup[[file]][[column]]
+  tokens <- x[is.na(suppressWarnings(as.numeric(x))) & !is.na(x)]
+  cat(sprintf("%s$%s : %d text values -> %s\n", file, column, length(tokens),
+              paste(names(table(tokens)), table(tokens), sep = "=", collapse = ", ")))
+})
+
+for (i in seq_len(nrow(text_cols))) {
+  f  <- text_cols$file[i]
+  cl <- text_cols$column[i]
+  before_na <- sum(is.na(dedup[[f]][[cl]]))
+  dedup[[f]][[cl]] <- as.numeric(dedup[[f]][[cl]])   # text tokens become NA here
+  after_na  <- sum(is.na(dedup[[f]][[cl]]))
+  log_qa(f, cl,
+         "Numeric codes stored as text with 'Unknown'/'not recorded' tokens",
+         "as.numeric(); text tokens become NA", before_na, after_na)
+}
+```
+
+The token counts are 25, 25 and 22, confirming the Milestone 1 figures. Three distinct placeholder strings are in use - `N/A`, `Unknown` and `not recorded` - which is why a single `na.strings` entry at load time would not have caught them all. This is one of the few Milestone 1 findings that survives re-examination unchanged, because the token count does not depend on the HouseholdID data type.
+
+## Sentinel map
+
+The GHS encodes missing and inapplicable responses as numeric codes rather than blanks. These must be recoded **per column**, because the same digit means different things in different fields. Every entry below is taken from the "Valid values / codes" column of `Data_Dictionary.pdf` and cross-checked against the observed value counts.
+
+```{r sentinel-map}
+# Columns sharing the same scheme are grouped onto one row to keep the map
+# readable. `columns` and `na_values` become list-columns.
+sentinels <- tribble(
+  ~file, ~columns, ~na_values, ~meaning,
+
+  # ---- D04 Dwelling Conditions ----
+  "D04", c("WallMaterialCode","RoofMaterialCode","TotalRooms","TenureCode"), c(99), "Unspecified",
+  "D04", c("RoofConditionCode","FloorConditionCode","RDPHousingCode"),       c(9),  "Unspecified",
+  "D04", c("HousingSubsidyCode"),                                            c(8,9), "NA / Unspecified",
+  "D04", c("RentRaw"),                                        c(88, 99), "Not applicable / Unspecified",
+
+  # ---- D05 Basic Services ----
+  "D05", c("WaterSafeCode","WaterClearCode","WaterTasteCode","WaterSmellCode",
+           "WaterTreatmentCode","MunicipalWaterSourceCode"),                 c(9),  "Unspecified",
+  "D05", c("WaterMeterCode","PaysForWaterCode","WaterInterruptions12MonthsCode",
+           "WaterInterruptionFrequencyCode","ToiletDistanceCode"),           c(8),  "Not applicable",
+  "D05", c("DistanceToWaterCode","TimeToWaterRaw","PipedWaterCode","SharedToiletCode",
+           "ToiletLocationCode","HandwashingFacilityCode","HandwashingCode"), c(8,9), "NA / Unspecified",
+  "D05", c("WaterAlternativeSourceCode"),                                    c(88), "Not applicable",
+  "D05", c("MainToiletCode"),                                                c(99), "Unspecified",
+
+  # ---- D06 Household Energy ----
+  "D06", c("ElectricityAccessCode","LoadsheddingFrequencyCode",
+           "SolarGeyserAssetCode","SolarPanelAssetCode"),                    c(9),  "Unspecified",
+  "D06", c("MainElectricitySourceCode","MainsElectricityCode",
+           "ElectricitySupplyCode","PaysForElectricityCode"),                c(8),  "Not applicable",
+  "D06", c("AlternativeLightingCode","AlternativeCookingCode"),              c(88), "Not applicable",
+
+  # ---- D07 Household Wellbeing ----
+  "D07", c("AdultHungerCode","ChildHungerCode",
+           "WorriedFoodWouldRunOutCode","UnableToEatHealthyFoodCode","AteFewFoodsCode",
+           "SkippedMealCode","AteLessCode","RanOutOfFoodCode",
+           "HungryButDidNotEatCode","WholeDayWithoutEatingCode"),            c(9),  "Unspecified",
+  "D07", c("FewFoodsDays","SkippedMealDays","AteLessDays","RanOutDays"),     c(8),  "Not applicable",
+  "D07", c("TotalMonthlyHouseholdIncomeRaw"),
+         c(9999999, 99999999, 999999999, 9999999999), "Refused / not recorded",
+
+  # ---- D08 Connectivity ----
+  "D08", c("TelephoneCode","FixedInternetCode","MobileInternetCode","PublicWiFiInternetCode",
+           "StudyInternetCode","WorkInternetCode","LibraryInternetCode",
+           "CafeInternetCode","ComputerAssetCode"),                          c(9),  "Unspecified",
+
+  # ---- D09 Household Resources ----
+  "D09", c("NoIncomeCode","ComparativeIncomeCode","VehicleAssetCode","TVAssetCode",
+           "PayTVAssetCode","ComputerAssetCode","WashingMachineAssetCode","FreezerAssetCode",
+           "FridgeAssetCode","MicrowaveAssetCode","GeyserAssetCode","RadioAssetCode"), c(9), "Unspecified",
+  "D09", c("MainIncomeSourceCode","ExpenditureBandCode","SocialGrantRecipients"), c(99), "Unspecified",
+  "D09", c("TotalVehicles"),                                  c(88, 99), "Not applicable / Unspecified",
+  "D09", c("RequiredIncomeRaw"),
+         c(9999999, 99999999, 999999999, 9999999999), "Not applicable",
+
+  # ---- D10 Mobility ----
+  "D10", c("TaxiUseCode","BusUseCode","TrainUseCode","TransportToHealthFacilityCode"), c(9), "Unspecified",
+  "D10", c("TaxiTrips","TaxiDistanceRaw","BusTrips","BusDistanceRaw",
+           "TrainTrips","TrainDistanceRaw"),                                 c(888),  "Not applicable",
+  "D10", c("TaxiCostRaw","BusCostRaw","TrainCostRaw"),                c(8888, 9999), "Not applicable / Unspecified",
+  "D10", c("NearestHealthFacilityCode"),                                     c(99), "Unspecified"
+)
+```
+
+### Three Milestone 1 treatments that had to be corrected
+
+`ExpenditureBandCode` - Milestone 1 recorded codes 8 and 9 as sentinels covering 46.6% of the column. They are valid expenditure bands on a 1-14 scale:
+
+```{r expenditure-check}
+table(dedup$D09$ExpenditureBandCode, useNA = "ifany")
+```
+
+The distribution rises smoothly to a peak at 8 and 9, and the data dictionary states "1-14 expenditure bands; 99 = Unspecified". The real sentinel is 99, at 3 rows. Applying the Milestone 1 treatment would have discarded almost half of a variable that H1 depends on.
+
+`HouseholdSize` - Milestone 1 recorded 0, 8 and 9 as sentinel contamination. Only 0 is invalid:
+
+```{r hhsize-check}
+table(dedup$D07$HouseholdSize, useNA = "ifany")
+```
+
+Counts decay monotonically from 1 through 25, and sizes 8 (461 households) and 9 (247 households) sit exactly on that curve. Recoding them would have deleted 708 genuine households. Only `0` is treated, in the validity step below.
+
+`RentRaw` - Milestone 1 recommended winsorising extreme rent values. `RentRaw` is a banded code (1-9), not a Rand amount; the data dictionary states "banded codes, not rand amounts; 88 = NA, 99 = Unspecified". Its maximum is 99, so there is no right tail to winsorise. It is treated as a sentinel recode only.
+
+### Applying the map
+
+```{r apply-sentinels}
+apply_sentinels <- function(df, file_id) {
+  rules <- filter(sentinels, file == file_id)
+  for (i in seq_len(nrow(rules))) {
+    # intersect() guards against a column having already been dropped or renamed
+    cols <- intersect(rules$columns[[i]], names(df))
+    vals <- rules$na_values[[i]]
+    for (cl in cols) {
+      before <- sum(is.na(df[[cl]]))
+      # %in% returns FALSE for NA, so existing NAs are left untouched
+      df[[cl]] <- replace(df[[cl]], df[[cl]] %in% vals, NA)
+      after  <- sum(is.na(df[[cl]]))
+      log_qa(file_id, cl,
+             paste0("Sentinel codes (", paste(vals, collapse = "/"), ") = ", rules$meaning[i]),
+             "Recoded to NA", before, after)
+    }
+  }
+  df
+}
+
+clean <- imap(dedup, ~ apply_sentinels(.x, .y))
+```
+
+D10 is the clearest illustration of why this has to be per-column rather than blanket: within one file, `TaxiTrips` and `TaxiDistanceRaw` use `888`, while `TaxiCostRaw` uses `8888` for "not applicable" and `9999` for "unspecified" - all describing the same 13 682 households that do not use taxis.
+
+## Impossible values
+
+```{r validity-rules}
+# which() is used instead of a plain logical index because a logical comparison
+# returns NA for NA inputs, and replace() would then overwrite the wrong cells.
+clamp      <- function(x, valid) replace(x, which(!(x %in% valid)), NA)
+drop_below <- function(x, lo)    replace(x, which(x < lo), NA)
+
+# D04 / D07: a household size of 0 is impossible (8 and 9 are RETAINED as valid)
+for (f in c("D04", "D07")) {
+  if ("HouseholdSize" %in% names(clean[[f]])) {
+    before <- sum(clean[[f]]$HouseholdSize == 0, na.rm = TRUE)
+    clean[[f]]$HouseholdSize <- drop_below(clean[[f]]$HouseholdSize, 1)
+    log_qa(f, "HouseholdSize", "Household size of 0 is impossible",
+           "Recode 0 to NA (8 and 9 retained as valid sizes)", before, 0)
+  }
+}
+
+# D08: negative smartphone counts (-20 to -1) - flagged in the data dictionary
+before <- sum(clean$D08$HouseholdSmartphones < 0, na.rm = TRUE)
+clean$D08$HouseholdSmartphones <- drop_below(clean$D08$HouseholdSmartphones, 0)
+log_qa("D08", "HouseholdSmartphones", "Negative counts (-20 to -1) are impossible",
+       "Recode negatives to NA", before, 0)
+
+# D10: banded travel time to a health facility, valid 1-5. Negatives are data
+# errors and 9 is an unspecified sentinel; the column is a band code, not minutes.
+before <- sum(!(clean$D10$TimeToHealthFacilityRaw %in% 1:5), na.rm = TRUE)
+clean$D10$TimeToHealthFacilityRaw <- clamp(clean$D10$TimeToHealthFacilityRaw, 1:5)
+log_qa("D10", "TimeToHealthFacilityRaw", "Negative values and code 9 outside valid 1-5 band",
+       "Restrict to 1:5, remainder to NA", before, 0)
+```
+
+## Two columns that do not mean what they are named
+
+```{r unusable-columns}
+se <- dedup$D09$SalaryEarnersInHousehold
+tg <- dedup$D09$TotalGrantRecipients
+
+# Line each D09 household up with its household size from D07 so the counts can be
+# tested against a hard logical ceiling: you cannot have more salary earners or
+# grant recipients in a household than there are people in it.
+hs <- dedup$D07$HouseholdSize[match(dedup$D09$HouseholdID, dedup$D07$HouseholdID)]
+
+tibble(
+  column = c("SalaryEarnersInHousehold", "TotalGrantRecipients", "SocialGrantRecipients"),
+  max    = c(max(se, na.rm = TRUE), max(tg, na.rm = TRUE),
+             max(dedup$D09$SocialGrantRecipients, na.rm = TRUE)),
+  `rows > 20` = c(sum(se > 20, na.rm = TRUE), sum(tg > 20, na.rm = TRUE),
+                  sum(dedup$D09$SocialGrantRecipients > 20, na.rm = TRUE)),
+  `exceeds HouseholdSize` = c(sum(se > hs, na.rm = TRUE), sum(tg > hs, na.rm = TRUE),
+                              sum(dedup$D09$SocialGrantRecipients > hs, na.rm = TRUE))
+) %>% kable(caption = "Count columns tested against household size")
+
+# The large values are not counts at all - they are Rand amounts.
+head(sort(unique(tg[tg > 20])), 12)
+```
+
+`SalaryEarnersInHousehold` reports more salary earners than people for 13 259 households, plus 88 rows at the 9999999 sentinel. `TotalGrantRecipients` exceeds 20 in 12 230 rows with modal values of 1990 and 480 - South African grant amounts, not headcounts. `Data_Dictionary.pdf` itself flags the latter as "scale unclear in raw data; validate before use". Both are excluded via `drop_map`.
+
+`SocialGrantRecipients` is clean (0-16, with a single 99 sentinel already recoded), so **H5 is unaffected** - it retains the variable it needs.
+
+## Apply the drop map and verify
+
+```{r apply-drops}
+# any_of() rather than all_of() so a column already absent does not error.
+clean <- imap(clean, function(df, id) select(df, -any_of(drop_map[[id]])))
+
+final_audit <- imap_dfr(clean, ~ tibble(
+  file       = .y,
+  rows       = nrow(.x),
+  cols       = ncol(.x),
+  unique_ids = n_distinct(.x$HouseholdID),
+  pct_na     = round(100 * mean(is.na(.x)), 2)
+))
+kable(final_audit, caption = "Cleaned files ready for Person B")
+
+stopifnot(all(final_audit$rows == 20940),
+          all(final_audit$unique_ids == 20940))
+
+# Guarantee to Person B: after the drops, HouseholdID is the ONLY column name that
+# still appears in more than one file, so the join cannot produce .x / .y pairs.
+dupes <- imap_dfr(clean, ~ tibble(file = .y, column = names(.x))) %>%
+  count(column) %>% filter(n > 1)
+stopifnot(setequal(dupes$column, "HouseholdID"))
+```
+
+## Export
+
+```{r export}
+iwalk(clean, function(df, id) {
+  saveRDS(df, file.path(CLEAN_DIR, paste0(id, "_clean.rds")))
+  write.csv(df, file.path(CLEAN_DIR, paste0(id, "_clean.csv")), row.names = FALSE)
+})
+
+write.csv(qa_log, file.path(CLEAN_DIR, "qa_log_personC.csv"), row.names = FALSE)
+
+cat("Files written to", CLEAN_DIR, ":\n")
+print(list.files(CLEAN_DIR))
+```
+
+## Data quality treatment log
+
+```{r qa-summary}
+qa_summary <- qa_log %>%
+  mutate(across(c(before, after), as.numeric),
+         cells_changed = after - before)
+
+# Headline: how much of each file was sentinel-encoded rather than genuinely blank
+qa_summary %>%
+  group_by(file) %>%
+  summarise(treatments = n(), cells_recoded_to_NA = sum(pmax(cells_changed, 0))) %>%
+  kable(caption = "Treatment summary by file")
+
+qa_summary %>%
+  arrange(desc(cells_changed)) %>%
+  head(25) %>%
+  kable(caption = "Data quality treatment log - top 25 by cells affected")
+```
+
+The full log is written to `data/clean/qa_log_personC.csv` and is the evidence base for the Task 2 section of the report: one row per column treated, each with its problem, treatment, and before/after missing-value count.
+
+# Handoff note for Person B
+
+Seven cleaned files in `data/clean/`, as `.rds` (**use these**) and `.csv`.
+
+- 20 940 rows each, `HouseholdID` is **character**, unique in every file.
+- No column except `HouseholdID` appears in more than one file, so the join will not produce `.x` / `.y` suffixes.
+- `SurveyYear`, `Province`, `ProvinceCode`, `GeoTypeCode`, `HouseholdWeight`, `HouseholdSize` and `TotalMonthlyHouseholdIncomeRaw` survive only in D07.
+- **The 20 684 figure from Milestone 1 is wrong** - it was a float-precision artefact. There is no gap to reconcile; the inner join across all seven files should return exactly 20 940 rows. If it returns fewer, something upstream has re-read a HouseholdID as numeric.
+- Excluded from D09 with evidence: `SalaryEarnersInHousehold`, `TotalGrantRecipients`. `SocialGrantRecipients` is intact for H5.
+
+**Load the `.rds` files, not the `.csv` files.** A CSV round-trip through `read.csv()` re-introduces the float bug on `HouseholdID`. If the CSVs must be used, read them with `colClasses = c(HouseholdID = "character")`.
+
+```{r handoff-check}
+# Person B can run this to confirm the files are intact before joining.
+check <- map(list.files(CLEAN_DIR, pattern = "_clean\\.rds$", full.names = TRUE), readRDS)
+names(check) <- gsub("_clean\\.rds$", "", list.files(CLEAN_DIR, pattern = "_clean\\.rds$"))
+
+tibble(file       = names(check),
+       rows       = map_int(check, nrow),
+       unique_ids = map_int(check, ~ n_distinct(.x$HouseholdID)),
+       id_class   = map_chr(check, ~ class(.x$HouseholdID))) %>%
+  kable(caption = "Handoff verification - read back from disk")
+```
+
+# Ethics and Responsible AI notes arising from preprocessing
+
+- **Exclusion of D01-D03 and D11** removes person-level demographic and labour-market detail from the analysis. The resulting model describes households as units and cannot speak to within-household inequality - for example, which household members bear the burden of food insecurity. This limitation must be stated whenever results are presented.
+- **Dropping `SalaryEarnersInHousehold`** removes the only household-level employment-intensity measure. The model will therefore underrepresent working-poor households, whose vulnerability is driven by low wages rather than by absence of employment.
+- **Sentinel recoding is not neutral.** Recoding "refused to answer" income to NA removes 433 households from income-based analysis. Refusal to disclose income is unlikely to be random with respect to income, so any complete-case analysis on income carries a selection bias that must be acknowledged rather than assumed away.
+- **Survey weights (`HouseholdWeight`) are retained** in D07 and must be applied for any population-level claim. Unweighted percentages describe the sample, not South Africa.
+- **`TimeToWaterRaw` is a band code, not minutes.** The Milestone 1 narrative around water-access distance for H2 was based on treating it as a continuous duration and needs re-wording before Person A relies on it.
+
+```{r session-info}
+sessionInfo()
+```

@@ -17,13 +17,13 @@ not an eligibility test** — see *Responsible use* below.
 | `data/integrated/` | Milestone 2 integrated household dataset (20,940 households), the modelling dataset (20,925 households with an FI Score), the train/test split and the data dictionary |
 | `data/modelling/` | Person A: fitted candidate workflows, CV and test predictions, model parameter table, input schema |
 | `data/evaluation/` | Person B: evaluation matrix, metrics, thresholds, calibration, subgroup performance, monitoring baseline, figures |
-| `notebook/` | Milestone 3 notebooks (Person A modelling, Person B evaluation) with knitted HTML; `M1_EDA.Rmd` (Milestone 1 EDA) |
+| `notebook/` | `BIN 381 Milestone 3 - Full Notebook (Group P1).Rmd` runs Parts A, B and C end to end; the three part notebooks (A modelling, B evaluation, C deployment, monitoring and ethics) with knitted HTML; the Milestone 2 cleaning notebook; `M1_EDA.Rmd` |
 | `models/` | `final_workflow.rds` (the deployed model, a copy of `data/modelling/final_workflow_binary.rds`) and `reference.rds` (training reference for explanations and drift checks) |
 | `app/` | Shiny app: `app.R` plus `R/validate.R`, `R/score.R`, `R/monitor.R` |
 | `R/` | Person C checks: `check_app_matches_model.R`, `fairness_check.R`, `review_monitoring.R`, `make_reference.R` |
 | `tests/` | `messy_households.csv` (deliberately bad input) and `test_validation.R` |
-| `monitoring/` | `batch_log.csv`, written by the app: per-upload totals only, no household rows |
-| `docs/` | Ethics and Responsible AI Usage Log |
+| `monitoring/` | `batch_log.csv`, written by the app at run time (not committed): per-upload totals only, no household rows |
+| `docs/figures/` | App screenshots and the deployment workflow diagram used in the report |
 | `renv/`, `renv.lock` | Pinned package versions (R 4.6.1, 225 packages) |
 
 ## Requirements
@@ -43,11 +43,14 @@ not an eligibility test** — see *Responsible use* below.
    ```
 3. **Data.** D01–D10 are already in `data/raw/`, and the Milestone 2 outputs are in
    `data/clean/` and `data/integrated/`. Nothing to copy (D11 is not needed).
-4. **Run the Milestone 3 notebooks in order** (knit in RStudio with *Knit Directory → Project Directory*):
-   1. `notebook/BIN 381 Milestone 3 Person A - Modelling Strategy and Implementation.Rmd`
-      → fits the models, writes `data/modelling/`
-   2. `notebook/BIN 381 Milestone 3 Person B - Evaluation and Interpretation.Rmd`
-      → evaluates them, writes `data/evaluation/`
+4. **Run the pipeline.** Knit `notebook/BIN 381 Milestone 3 - Full Notebook (Group P1).Rmd`, which
+   runs the three parts in order from a clean session (or knit the part notebooks one at a time):
+   1. Person A, modelling → fits the models, writes `data/modelling/`
+   2. Person B, evaluation → evaluates them, writes `data/evaluation/`
+   3. Person C, deployment, monitoring and ethics → checks the app against the evaluation
+
+   The cleaned files in `data/clean/` can be rebuilt from `data/raw/` with
+   `notebook/BIN 381 Milestone 2 Person C - Data Selection and Cleaning.Rmd`.
 
    Check: 20,925 modelled households (train 14,646 / test 6,279). Final model: binary
    logistic regression (glmnet), threshold 0.24. Test recall 0.807, precision 0.419,
@@ -108,4 +111,4 @@ for BIN381). https://isibaloweb.statssa.gov.za/
 
 ## AI use
 
-AI assistance is recorded in the group's Ethics and Responsible AI Usage Log (`docs/`).
+AI use is acknowledged in the Milestone 3 report and in the group's Ethics and Responsible AI Usage Log.

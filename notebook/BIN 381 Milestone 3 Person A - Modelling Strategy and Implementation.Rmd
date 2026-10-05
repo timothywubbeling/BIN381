@@ -11,6 +11,8 @@ This notebook covers Task 1: modelling strategy and implementation. It starts fr
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = FALSE)
+# Paths below are relative to the project root; this lets the notebook knit from notebook/ too.
+if (basename(getwd()) == "notebook") knitr::opts_knit$set(root.dir = normalizePath(".."))
 library(tidyverse)
 library(tidymodels)
 library(rpart)

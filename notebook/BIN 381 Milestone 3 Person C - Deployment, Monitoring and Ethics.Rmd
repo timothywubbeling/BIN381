@@ -1,0 +1,186 @@
+---
+title: "BIN381 Milestone 3 - Person C: Deployment, Monitoring and Ethics"
+author: "Timothy Wubbeling - Group P1"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+This notebook covers Task 4 (deployment and monitoring) and the ethics and fairness part of Task 3. It starts from Person A's final workflow (`models/final_workflow.rds`) and Person B's evaluation outputs (`data/evaluation/`), and does not refit any model. It is the evidence behind the deployment, monitoring and fairness sections of the report: the validation path for new data, proof that the Shiny app reproduces the evaluated model exactly, the explanation method, the fairness check, and the monitoring baselines and drift test.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+# Paths below are relative to the project root, as in the Person A and Person B notebooks.
+if (basename(getwd()) == "notebook") knitr::opts_knit$set(root.dir = normalizePath(".."))
+```
+
+```{r packages}
+library(dplyr)
+library(knitr)
+library(workflows)
+source("app/R/validate.R")    # validate_households(), read_upload(), RULES
+source("app/R/score.R")       # to_model_input(), score_households()
+source("app/R/monitor.R")     # psi(), batch_summary()
+source("R/fairness_check.R")  # subgroup_table(), add_bands()
+```
+
+# 4.1 Deployed Model and Threshold
+
+The app must serve exactly the model Person B evaluated, at the threshold Person B chose. Both are checked here rather than assumed.
+
+```{r deployed-model}
+wf       <- readRDS("models/final_workflow.rds")
+ref      <- readRDS("models/reference.rds")
+baseline <- read.csv("data/evaluation/monitoring_baseline.csv")
+THRESHOLD <- baseline$threshold
+
+same_file <- unname(tools::md5sum("models/final_workflow.rds")) ==
+             unname(tools::md5sum("data/modelling/final_workflow_binary.rds"))
+app_line  <- grep("^THRESHOLD", readLines("app/app.R"), value = TRUE)
+app_threshold <- as.numeric(sub("^THRESHOLD *<- *([0-9.]+).*", "\\1", app_line))
+stopifnot(same_file, app_threshold == THRESHOLD)
+
+cat("Deployed model is Person A's binary workflow:", same_file,
+    "| app threshold:", app_threshold, "| reference version:", ref$model_version, "\n")
+kable(baseline, digits = 3, caption = "Person B's test-set baseline for the deployed model")
+```
+
+# 4.2 Path for New Data: Validate, Clean, Preprocess, Score
+
+New households enter through the single-household form or a CSV upload, and both go through the same four steps:
+
+1. **Validate** (`app/R/validate.R`): the seven inputs must be present; every column is read as text so 18-digit HouseholdIDs stay exact (the Milestone 2 precision defect); food-insecurity items in an upload are ignored (leakage rule); duplicate IDs are flagged.
+2. **Clean**: the Milestone 2 rules, column by column (table below). Sentinels and text tokens become missing; unseen codes, impossible values and rows with more than two missing inputs are not scored.
+3. **Preprocess** (`to_model_input()` in `app/R/score.R`): raw codes become the model's features exactly as in Person A's `prep_df()` (labelled factors, `Income_Log = log1p(income)`, `Income_PerCapita = income / household size`); the workflow's recipe then imputes, encodes and scales with values learned on the training data only.
+4. **Score**: the probability of food insecurity, "Higher risk: refer for review" at or above the threshold, and the three inputs that move the probability most.
+
+```{r rules}
+fmt <- function(x) format(x, scientific = FALSE, big.mark = " ", trim = TRUE)
+rules_tbl <- data.frame(
+  input = names(RULES),
+  recoded_to_missing = sapply(RULES, function(r) if (length(r$sentinels)) paste(fmt(r$sentinels), collapse = ", ") else "-"),
+  valid = sapply(RULES, function(r) if (!is.null(r$levels)) paste0("codes ", min(r$levels), "-", max(r$levels))
+                                     else paste0(fmt(r$min), " to ", fmt(r$max), " (above: warning)")),
+  row.names = NULL)
+kable(rules_tbl, caption = "Per-input cleaning rules (from the Milestone 2 sentinel map)")
+
+kable(read.csv("data/modelling/input_schema_for_personC.csv")[, 1:3],
+      caption = "Person A's input schema: the model's features and how each is formed")
+```
+
+## Messy-input test
+
+`tests/messy_households.csv` holds 13 deliberately bad rows (fake IDs). Every rule above has at least one row that should trigger it.
+
+```{r messy-input}
+raw <- read_upload("tests/messy_households.csv")
+v   <- validate_households(raw)
+kable(as.data.frame(table(status = v$data$status)), caption = "Row status")
+kable(v$issues, row.names = FALSE, caption = "Issues table shown to the user (row 0 = whole file)")
+source("tests/test_validation.R")
+```
+
+# 4.3 The App Reproduces Person B's Evaluation
+
+The joint tasks require the same numbers in the notebook, the report and the app. This runs the full test set through the app's own path and compares the result with Person B's saved predictions of the final model.
+
+```{r app-equals-model}
+source("R/check_app_matches_model.R")
+```
+
+# 4.4 Explaining a Result
+
+For each household, each input in turn is swapped for the typical training value (median for counts and income, most common code for categories) and the household is re-scored; the change in probability is that input's contribution. The three largest are shown. This works for any model type, but it changes one input at a time (no interactions), depends on the chosen baseline, and shows association, not cause.
+
+```{r explanations}
+examples <- data.frame(
+  ComparativeIncomeCode = c(5, 2), GeoTypeCode = c(2, 1), HouseholdSize = c(6, 2),
+  TotalMonthlyHouseholdIncomeRaw = c(1200, 30000), ElectricityAccessCode = c(2, 1),
+  SocialGrantRecipients = c(2, 0), MainToiletCode = c(5, 1))
+ex <- score_households(wf, validate_households(examples), ref, THRESHOLD)
+kable(cbind(household = c("Rural, income fell, no electricity", "Urban, R30 000 a month"),
+            ex[, c("probability", "predicted", "main_factors")]),
+      caption = "Two example households scored by the app")
+```
+
+# 4.5 Fairness: Equal Opportunity
+
+Criterion: among households that really are food insecure, the screen should find a similar share in every group (similar recall, i.e. similar false-negative rate), because a missed food-insecure household is the costliest error. The tolerance was set before the results were examined: a group's recall within 10 percentage points of overall recall. Recall is shown with 95% Wilson intervals because some groups are small.
+
+```{r fairness-table}
+sub <- read.csv("data/evaluation/subgroup_performance.csv")
+kable(sub %>% select(variable, group, households, at_risk, recall, recall_95_low, recall_95_high,
+                     precision, pct_flagged, gap_vs_overall, within_10_points),
+      digits = 3, caption = "Person B's subgroup performance at the deployed threshold")
+```
+
+The same table is recomputed independently with `R/fairness_check.R` from Person B's test predictions, as a check that both use the same groups and the same definition.
+
+```{r fairness-recheck}
+preds <- add_bands(read.csv("data/evaluation/final_model_test_predictions.csv"))
+mine  <- do.call(rbind, lapply(c("GeoTypeCode", "income_band", "size_band", "grant_band"),
+                               function(g) subgroup_table(preds, g, THRESHOLD)))
+both  <- merge(mine[, c("variable", "group", "households", "insecure", "recall")],
+               sub[, c("variable", "group", "households", "at_risk", "recall")],
+               by = c("variable", "group"), suffixes = c("_personC", "_personB"))
+# fairness_check.R rounds recall to 3 decimals; compare at that precision, and the counts exactly
+stopifnot(nrow(both) == nrow(mine),
+          all(both$households_personC == both$households_personB),
+          all(both$insecure == both$at_risk),
+          max(abs(both$recall_personC - round(both$recall_personB, 3))) < 1e-9)
+cat("Recomputed for", nrow(both), "groups: same households, same at-risk counts, same recall as Person B.\n")
+
+kable(sub %>% filter(!within_10_points) %>%
+        select(variable, group, households, at_risk, recall, recall_95_low, recall_95_high, gap_vs_overall),
+      digits = 3, caption = "Groups outside the 10-point tolerance")
+```
+
+Settlement type and all nine provinces are within tolerance; farm households (197 in the test set, 62 at risk) have a wide interval, so no claim of parity is made for them. Four groups fall outside. The screen catches *more* of the at-risk households among the poorest and the largest households, and far *fewer* among households with incomes above R11,500 a month and households with no grant recipients: food-insecure households that do not look poor on these inputs are the ones the model misses. These findings are carried into the ethics register and the usage limits shown in the app.
+
+# 4.6 Monitoring: Baselines and a Drift Test
+
+The outcome is only observed when Stats SA releases a new GHS, so between releases the app monitors its inputs and outputs. Each upload writes one row of totals (no household rows) to `monitoring/batch_log.csv`. Here the same summary is computed for two batches: 1 000 randomly chosen test households as they are, and the same households with a simulated shift (incomes 25% higher, as after about five years of inflation, and a third of urban households recorded as traditional/tribal).
+
+```{r drift-test}
+test <- readRDS("data/integrated/M2_test.rds")
+score_batch <- function(df) score_households(wf, validate_households(df[PREDICTORS]), ref, THRESHOLD)
+
+set.seed(381)
+as_is   <- test[sample(nrow(test), 1000), ]   # random, so the batch reflects the whole test set
+shifted <- as_is
+shifted$TotalMonthlyHouseholdIncomeRaw <- shifted$TotalMonthlyHouseholdIncomeRaw * 1.25
+urban <- which(shifted$GeoTypeCode == 1)
+shifted$GeoTypeCode[sample(urban, round(length(urban) / 3))] <- 2
+
+batches <- rbind(cbind(batch = "Test households as they are", batch_summary(score_batch(as_is), ref, THRESHOLD)),
+                 cbind(batch = "Simulated shift",             batch_summary(score_batch(shifted), ref, THRESHOLD)))
+
+# Alert rules from the monitoring plan (as in R/review_monitoring.R)
+worst <- pmax(batches$psi_income, batches$psi_geotype, batches$psi_hhsize, na.rm = TRUE)
+batches$drift <- ifelse(worst > 0.25, "ACT: significant shift", ifelse(worst > 0.10, "watch", "stable"))
+batches$output_shift <- ifelse(abs(batches$pct_higher_risk - 100 * baseline$test_pct_flagged) > 10,
+                               "check threshold and drift", "ok")
+kable(batches[, c("batch", "rows", "pct_not_scored", "pct_income_missing", "psi_income",
+                  "psi_geotype", "psi_hhsize", "pct_higher_risk", "drift", "output_shift")],
+      digits = 3, caption = "Monitoring summary per batch, with the alert rules applied")
+```
+
+```{r monitoring-thresholds}
+plan <- data.frame(
+  signal   = c("Input drift (income, settlement type, household size)", "Missing income",
+               "Rows not scored", "Share flagged higher risk", "Recall (at each GHS release)",
+               "Calibration (at each GHS release)", "Subgroup recall (at each GHS release)"),
+  baseline = c("PSI 0", "2.2% (451 of 20 940 in M2)", "0% of test rows",
+               sprintf("%.1f%%", 100 * baseline$test_pct_flagged), sprintf("%.3f", baseline$test_recall),
+               sprintf("Brier %.3f", baseline$test_brier), "Person B's subgroup table"),
+  alert    = c("PSI 0.10-0.25 watch; above 0.25 act", "above 5%", "above 5%", "+/- 10 points",
+               sprintf("below %.3f", baseline$recall_alert_below), "Brier clearly worse", "gap above 10 points"))
+kable(plan, caption = "Monitoring thresholds tied to the test-set baseline")
+```
+
+```{r session}
+sessionInfo()
+```

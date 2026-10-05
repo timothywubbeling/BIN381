@@ -1,0 +1,63 @@
+---
+title: "BIN381 Milestone 3 - Modelling, Evaluation and Deployment"
+author: "Group P1: Alexander Solomon (Person A), Rudi Jan du Plessis (Person B), Timothy Wubbeling (Person C)"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+This notebook runs the whole of Milestone 3 end to end from a clean R session, in the order the work was handed over:
+
+* **Part A - Modelling strategy and implementation (Task 1).** Starts from the Milestone 2 train/test split in `data/integrated/`, tunes and fits the candidate models, and writes them with their predictions to `data/modelling/`.
+* **Part B - Evaluation and interpretation (Tasks 2 and 3).** Evaluates Part A's models without refitting them, selects the final model and threshold, and writes the evaluation outputs to `data/evaluation/`.
+* **Part C - Deployment, monitoring and ethics (Task 4 and the ethics part of Task 3).** Checks that the Shiny app in `app/` serves the selected model, validates new data and reproduces Part B's results exactly, and sets the fairness and monitoring evidence.
+
+Each part is also a standalone notebook in `notebook/`; this file includes them unchanged as child documents. Packages are pinned in `renv.lock` (run `renv::restore()` first).
+
+```{r full-setup, include=FALSE}
+options(knitr.duplicate.label = "allow")   # each part has its own "setup" chunk
+# All paths are relative to the project root, as in the three part notebooks. The root is
+# always set explicitly so the included parts run from it however the notebook is knitted.
+root <- normalizePath(if (basename(getwd()) == "notebook") ".." else ".")
+knitr::opts_knit$set(root.dir = root)
+
+# Include each part without its own title block, so this notebook keeps one title.
+strip_yaml <- function(path) {
+  path <- file.path(root, path)
+  x <- readLines(path, warn = FALSE, encoding = "UTF-8")
+  marks <- which(x == "---")
+  if (length(marks) >= 2 && marks[1] == 1) x <- x[-seq_len(marks[2])]
+  out <- tempfile(fileext = ".Rmd")
+  writeLines(x, out, useBytes = TRUE)
+  out
+}
+part_a <- strip_yaml("notebook/BIN 381 Milestone 3 Person A - Modelling Strategy and Implementation.Rmd")
+part_b <- strip_yaml("notebook/BIN 381 Milestone 3 Person B - Evaluation and Interpretation.Rmd")
+part_c <- strip_yaml("notebook/BIN 381 Milestone 3 Person C - Deployment, Monitoring and Ethics.Rmd")
+```
+
+# Part A - Modelling Strategy and Implementation (Alexander Solomon)
+
+```{r part-a, child = part_a}
+```
+
+## Deployed model
+
+The app serves Part A's binary model (section 1.13). It is copied to `models/final_workflow.rds`, the file the app and Part B read.
+
+```{r deploy-model-copy}
+stopifnot(file.copy("data/modelling/final_workflow_binary.rds", "models/final_workflow.rds", overwrite = TRUE))
+```
+
+# Part B - Evaluation and Interpretation (Rudi Jan du Plessis)
+
+```{r part-b, child = part_b}
+```
+
+# Part C - Deployment, Monitoring and Ethics (Timothy Wubbeling)
+
+```{r part-c, child = part_c}
+```
