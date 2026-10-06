@@ -14,11 +14,12 @@ not an eligibility test** — see *Responsible use* below.
 |---|---|
 | `data/raw/` | Stats SA source CSVs D01–D10 (included; this repo is private). D11 is not used and not included. |
 | `data/clean/` | Milestone 2 cleaned files (`D04_clean.rds` … `D10_clean.rds`) and the QA log |
+| `data/reference/` | Inputs to the Milestone 2 notebooks: the Milestone 1 column dictionary and the hand-written dictionary entries for the six derived variables |
 | `data/integrated/` | Milestone 2 integrated household dataset (20,940 households), the modelling dataset (20,925 households with an FI Score), the train/test split and the data dictionary |
 | `data/modelling/` | Person A: fitted candidate workflows, CV and test predictions, model parameter table, input schema, class-weight comparison |
 | `data/evaluation/` | Person B: evaluation matrix, metrics, thresholds, calibration, subgroup performance, monitoring baseline, figures |
 | `data/powerbi/` | Tables for the Power BI dashboard: all 20,925 households scored by the deployed model, model summary, subgroup performance, drivers, and the R reconciliation table |
-| `notebook/` | `BIN 381 Milestone 3 - Full Notebook (Group P1).Rmd` runs Parts A, B and C end to end; the three part notebooks (A modelling, B evaluation, C deployment, monitoring and ethics) with knitted HTML; the Milestone 2 cleaning notebook; `M1_EDA.Rmd` |
+| `notebook/` | `BIN 381 Milestone 3 - Full Notebook (Group P1).Rmd` runs Parts A, B and C end to end; the three part notebooks (A modelling, B evaluation, C deployment, monitoring and ethics) with knitted HTML; the three Milestone 2 notebooks (C cleaning, B integration, A preparation for modelling); `M1_EDA.Rmd` |
 | `models/` | `final_workflow.rds` (the deployed model, a copy of `data/modelling/final_workflow_binary.rds`), `reference.rds` (training reference for explanations and drift checks) and `CHANGELOG.md` (model versions, how to add one and how to roll back) |
 | `app/` | Shiny app: `app.R` plus `R/validate.R`, `R/score.R`, `R/monitor.R` |
 | `R/` | Person C checks: `check_app_matches_model.R`, `fairness_check.R`, `review_monitoring.R`, `make_reference.R`; `export_powerbi.R` builds `data/powerbi/` |
@@ -51,8 +52,13 @@ not an eligibility test** — see *Responsible use* below.
    2. Person B, evaluation → evaluates them, writes `data/evaluation/`
    3. Person C, deployment, monitoring and ethics → checks the app against the evaluation
 
-   The cleaned files in `data/clean/` can be rebuilt from `data/raw/` with
-   `notebook/BIN 381 Milestone 2 Person C - Data Selection and Cleaning.Rmd`.
+   The Milestone 2 inputs can be rebuilt from `data/raw/` by knitting the Milestone 2 notebooks
+   in this order (each reproduces the committed files exactly):
+   1. `BIN 381 Milestone 2 Person C - Data Selection and Cleaning.Rmd` → `data/clean/`
+   2. `BIN 381 Milestone 2 Person B - Integration, Construction and Data Dictionary.Rmd` →
+      `data/integrated/household_integrated`, the join and key-repair logs and the data dictionary
+   3. `BIN 381 Milestone 2 Person A - Prepare for Modelling.Rmd` → the modelling dataset and the
+      train/test split (`M2_train.rds`, `M2_test.rds`)
 
    Check: 20,925 modelled households (train 14,646 / test 6,279). Final model: binary
    logistic regression (glmnet), threshold 0.24. Test recall 0.807, precision 0.419,

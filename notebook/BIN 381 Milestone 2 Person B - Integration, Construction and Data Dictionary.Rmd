@@ -1,0 +1,689 @@
+---
+title: "BIN381 Milestone 2 - Person B: Integration, Construction & Data Dictionary"
+author: "Rudi Jan du Plessis - Group P1"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+This notebook starts where `BIN 381 Milestone 2 Person C - Data Selection and Cleaning.Rmd` stops. It reads the seven cleaned household files from `data/clean/`, joins them into one analytical dataset, checks that the join is correct, and generates the data dictionary. Everything it produces goes to `data/integrated/`.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = FALSE)
+# Paths are relative to the project root; this lets the notebook knit from notebook/ too.
+if (basename(getwd()) == "notebook") knitr::opts_knit$set(root.dir = normalizePath(".."))
+#libraries
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tibble)
+library(purrr)
+library(readr)
+library(knitr)
+library(DT)
+
+RAW_DIR   <- "data/raw/"
+CLEAN_DIR <- "data/clean/"
+REF_DIR   <- "data/reference/"
+OUT_DIR   <- "data/integrated/"
+dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
+
+# The seven household files kept in Task 1, in join order. D07 goes first: it is the focal
+# outcome file and the only one that still carries the shared descriptors after cleaning.
+FILES <- c(D07 = "D07_Household_Wellbeing.csv",
+           D04 = "D04_Dwelling_Conditions.csv",
+           D05 = "D05_Basic_Services.csv",
+           D06 = "D06_Household_Energy.csv",
+           D08 = "D08_Connectivity_Access.csv",
+           D09 = "D09_Household_Resources.csv",
+           D10 = "D10_Mobility_Access.csv")
+
+# Thousands separator for numbers in the text, matching Person C's "20 940" style
+fmt <- function(x) format(x, big.mark = " ", scientific = FALSE)
+
+# A genuine GHS HouseholdID is exactly 18 digits
+is_id_shaped <- function(x) str_detect(x, "^[0-9]{18}$")
+
+# Number of positions where two vectors differ, counting NA-versus-value as a difference
+n_differ <- function(a, b) sum(xor(is.na(a), is.na(b)) | (!is.na(a) & !is.na(b) & a != b))
+```
+
+# Task 3 - Dataset Integration
+
+```{r inputs}
+clean <- map(names(FILES), ~ readRDS(paste0(CLEAN_DIR, .x, "_clean.rds")))
+names(clean) <- names(FILES)
+
+input_audit <- imap_dfr(clean, ~ tibble(
+  file          = .y,
+  rows          = nrow(.x),
+  cols          = ncol(.x),
+  unique_ids    = n_distinct(.x$HouseholdID),
+  id_class      = class(.x$HouseholdID),
+  malformed_ids = sum(!is_id_shaped(.x$HouseholdID))   # anything that is not an 18-digit code
+))
+kable(input_audit, caption = "Cleaned files as received from Person C")
+
+# Each file must be at household grain with a text key. One row per HouseholdID on both
+# sides of every join is what makes the joins below one-to-one.
+stopifnot(all(input_audit$id_class == "character"),
+          all(input_audit$rows == input_audit$unique_ids))
+
+n_hh <- nrow(clean$D07)   # households per file after Person C's deduplication
+```
+
+All seven files arrive at household grain with `HouseholdID` stored as text, as the handoff note promised. The `malformed_ids` column shows something the handoff did not mention: `r input_audit$malformed_ids[input_audit$file == "D05"]` IDs in D05 are not 18-digit household codes. They are unique strings, so they pass a uniqueness check, but they cannot match any other file.
+
+## Key overlap audit
+
+Before joining, check that the seven files describe the same households, using D07 as the reference.
+
+```{r overlap}
+ids <- map(clean, "HouseholdID")
+
+overlap <- imap_dfr(ids, ~ tibble(
+  file               = .y,
+  unique_ids         = length(.x),
+  in_file_not_in_D07 = length(setdiff(.x, ids$D07)),
+  in_D07_not_in_file = length(setdiff(ids$D07, .x))
+))
+kable(overlap, caption = "HouseholdID overlap with D07")
+
+n_common_7 <- length(reduce(ids, intersect))
+n_common_6 <- length(reduce(ids[c("D04", "D05", "D06", "D07", "D09", "D10")], intersect))  # Milestone 1 core six
+n_union    <- length(reduce(ids, union))
+
+tibble(measure    = c("IDs in all seven files",
+                      "IDs in the six Milestone 1 core files (without D08)",
+                      "IDs in at least one file"),
+       households = c(n_common_7, n_common_6, n_union)) %>%
+  kable(caption = "Intersection and union of HouseholdIDs")
+
+orphan_ids  <- setdiff(ids$D05, ids$D07)   # in D05 and in no other file
+missing_ids <- setdiff(ids$D07, ids$D05)   # in every other file but not in D05
+stopifnot(length(orphan_ids) == length(missing_ids))
+
+tibble(D05_orphan_id = orphan_ids, household_with_no_D05_record = missing_ids) %>%
+  kable(caption = "Keys that do not line up (each column in file order - whether they correspond is tested below)")
+```
+
+Only D05 disagrees, and it disagrees in both directions: `r length(orphan_ids)` placeholder IDs (`UNMATCHED_` followed by six digits) exist in no other file, and the same number of households present in all six other files have no D05 record.
+
+```{r strict-join}
+# A plain inner join runs without complaint and quietly drops those households.
+strict_join <- reduce(clean, function(x, y) inner_join(x, y, by = "HouseholdID"))
+nrow(strict_join)
+
+# A guarded join refuses. unmatched = "error" stops the join if any household would be
+# dropped; relationship = "one-to-one" stops it if any household would be duplicated.
+guarded <- tryCatch(
+  inner_join(clean$D07, clean$D05, by = "HouseholdID",
+             relationship = "one-to-one", unmatched = "error"),
+  error = function(e) conditionMessage(e))
+if (is.character(guarded)) cat(guarded, sep = "\n") else cat("Guarded join ran: no unmatched keys\n")
+```
+
+The handoff note expected the inner join to return exactly 20 940 rows. It returns `r fmt(nrow(strict_join))`, because Person C's checks confirmed that every file had 20 940 *unique* IDs but not that the files held the *same* IDs. The row named in the error, `r which(!ids$D07 %in% ids$D05)[1]`, is the first D07 household with no D05 match.
+
+## Repairing the orphaned D05 keys
+
+Dropping `r length(missing_ids)` households would be defensible on size alone (`r round(100 * length(missing_ids) / n_hh, 2)`% of the sample), but it assumes their D05 records are missing. The raw files suggest the records are present and only the key is damaged. A key is restored only if two independent pieces of evidence identify the same household.
+
+Person C's `drop_map` removed the shared descriptors (`SurveyYear`, `ProvinceCode`, `GeoTypeCode`, `HouseholdWeight`) from D05, so they are re-read from the raw files here. They are used only as evidence; nothing from these raw copies enters the integrated dataset.
+
+```{r raw-descriptors}
+descriptor_cols <- c("SurveyYear", "ProvinceCode", "GeoTypeCode", "HouseholdWeight")
+
+# Same loader settings as Person C (HouseholdID as text), keeping the key, the shared
+# descriptors, and each row's position in the raw file.
+read_descriptors <- function(filename) {
+  read.csv(paste0(RAW_DIR, filename),
+           colClasses       = c(HouseholdID = "character"),
+           stringsAsFactors = FALSE,
+           na.strings       = c("", "NA")) %>%
+    select(HouseholdID, any_of(descriptor_cols)) %>%
+    mutate(row_position = row_number())
+}
+raw_desc <- map(FILES, read_descriptors)
+
+imap_dfr(raw_desc, ~ tibble(
+  file               = .y,
+  raw_rows           = nrow(.x),
+  duplicate_rows     = sum(duplicated(.x$HouseholdID)),
+  first_duplicate_at = if (any(duplicated(.x$HouseholdID))) min(which(duplicated(.x$HouseholdID))) else NA_integer_
+)) %>% kable(caption = "Where the duplicate rows sit in the raw files")
+```
+
+Every duplicate row in D04, D07 and D09 comes after row `r fmt(n_hh)`, so the first `r fmt(n_hh)` rows of the raw files can be compared position by position.
+
+### Evidence 1 - row position
+
+```{r evidence-position}
+# If every raw file lists households in the same order, row k of D05 describes the same
+# household as row k of D07.
+first_rows <- seq_len(n_hh)
+
+position_agreement <- imap_dfr(raw_desc[names(raw_desc) != "D07"], ~ tibble(
+  file                  = .y,
+  positions_compared    = n_hh,
+  same_household_as_D07 = sum(.x$HouseholdID[first_rows] == raw_desc$D07$HouseholdID[first_rows]),
+  different             = n_hh - same_household_as_D07
+))
+kable(position_agreement, caption = "Row-by-row agreement with D07")
+
+by_position <- raw_desc$D05 %>%
+  filter(!is_id_shaped(HouseholdID)) %>%
+  transmute(orphan_id = HouseholdID, row_position,
+            positional_match = raw_desc$D07$HouseholdID[row_position])
+
+# The positions where D05 differs from D07 must be exactly the rows holding placeholder IDs
+stopifnot(setequal(which(raw_desc$D05$HouseholdID[first_rows] != raw_desc$D07$HouseholdID[first_rows]),
+                   by_position$row_position))
+```
+
+`r paste(position_agreement$file[position_agreement$different == 0], collapse = ", ")` agree with D07 at every position. D05 agrees at `r fmt(position_agreement$same_household_as_D07[position_agreement$file == "D05"])` positions and differs at exactly `r position_agreement$different[position_agreement$file == "D05"]`: the rows that hold the placeholder IDs. At each of those rows, D07 has one of the households that is missing from D05.
+
+### Evidence 2 - shared descriptors
+
+```{r evidence-attributes}
+d07_households <- distinct(raw_desc$D07, HouseholdID, .keep_all = TRUE)
+
+orphan_descriptors <- raw_desc$D05 %>%
+  filter(!is_id_shaped(HouseholdID)) %>%
+  select(orphan_id = HouseholdID, all_of(descriptor_cols))
+
+# Match each orphan's descriptors against the households that have no D05 record
+by_attributes <- orphan_descriptors %>%
+  inner_join(d07_households %>%
+               filter(HouseholdID %in% missing_ids) %>%
+               select(attribute_match = HouseholdID, all_of(descriptor_cols)),
+             by = descriptor_cols, relationship = "many-to-many")
+
+# For context: how many households in the whole sample share each orphan's descriptors.
+# Descriptors alone are not unique, which is why they only count when row position agrees.
+sample_sharing <- orphan_descriptors %>%
+  left_join(count(d07_households, SurveyYear, ProvinceCode, GeoTypeCode, HouseholdWeight,
+                  name = "households_with_same_descriptors"),
+            by = descriptor_cols)
+```
+
+### Decision
+
+```{r repair-decision}
+n_candidates <- count(by_attributes, orphan_id, name = "attribute_candidates")
+
+key_repair <- by_position %>%
+  left_join(sample_sharing, by = "orphan_id") %>%
+  left_join(n_candidates, by = "orphan_id") %>%
+  left_join(select(by_attributes, orphan_id, attribute_match), by = "orphan_id") %>%
+  mutate(attribute_candidates = coalesce(attribute_candidates, 0L),
+         evidence_agrees      = !is.na(attribute_match) & attribute_match == positional_match,
+         restored_id          = if_else(evidence_agrees, positional_match, NA_character_))
+
+key_repair %>%
+  select(orphan_id, row_position, ProvinceCode, GeoTypeCode, HouseholdWeight,
+         households_with_same_descriptors, attribute_candidates,
+         positional_match, attribute_match, evidence_agrees) %>%
+  kable(caption = "Key repair decision table")
+
+# The repair goes ahead only if every condition holds. Otherwise the knit stops here.
+stopifnot(
+  nrow(key_repair) == length(missing_ids),         # one orphan for each household with no D05 record
+  all(key_repair$attribute_candidates == 1),       # descriptors point to exactly one of those households
+  all(key_repair$evidence_agrees),                 # ...and it is the household row position points to
+  !anyDuplicated(key_repair$restored_id),          # no household is claimed twice
+  setequal(key_repair$restored_id, missing_ids),   # every household without a D05 record is accounted for
+  !any(key_repair$restored_id %in% ids$D05)        # a restored ID is not already in use in D05
+)
+```
+
+Each orphan's descriptors match exactly one of the households with no D05 record, and it is the same household that row position points to. Descriptors alone would not be enough: across the whole sample, between `r min(key_repair$households_with_same_descriptors)` and `r max(key_repair$households_with_same_descriptors)` households share an orphan's province, settlement type and weight. Row position and descriptors together single out one household every time.
+
+```{r repair-apply}
+# Replace a placeholder with its restored ID; every other key passes through unchanged.
+restore_keys <- function(df) {
+  df %>%
+    left_join(select(key_repair, HouseholdID = orphan_id, restored_id), by = "HouseholdID") %>%
+    mutate(HouseholdID = coalesce(restored_id, HouseholdID)) %>%
+    select(-restored_id)
+}
+
+d05_ids_before <- clean$D05$HouseholdID
+clean$D05      <- restore_keys(clean$D05)
+
+stopifnot(sum(clean$D05$HouseholdID != d05_ids_before) == nrow(key_repair),   # only these keys changed
+          all(is_id_shaped(clean$D05$HouseholdID)),
+          n_distinct(clean$D05$HouseholdID) == n_hh,
+          setequal(clean$D05$HouseholdID, clean$D07$HouseholdID))
+```
+
+D05 now holds the same `r fmt(n_hh)` households as the other six files. The `r nrow(key_repair)` changes are saved to `key_repair_log_personB.csv` with their evidence, so they can be audited. The conservative alternative is to drop these households, which gives `r fmt(nrow(strict_join))` rows.
+
+## The join
+
+D07 is the anchor, and each remaining file is joined to it in turn. Both guards stay on at every step, so if the loop finishes, no household was dropped or duplicated.
+
+```{r join}
+join_log   <- tibble()
+integrated <- clean$D07
+
+for (f in setdiff(names(clean), "D07")) {
+  before     <- integrated
+  integrated <- inner_join(integrated, clean[[f]], by = "HouseholdID",
+                           relationship = "one-to-one", unmatched = "error")
+  join_log <- bind_rows(join_log, tibble(
+    step              = nrow(join_log) + 1,
+    joined_file       = f,
+    rows_before       = nrow(before),
+    rows_in_file      = nrow(clean[[f]]),
+    unmatched_before  = nrow(anti_join(before, clean[[f]], by = "HouseholdID")),
+    unmatched_in_file = nrow(anti_join(clean[[f]], before, by = "HouseholdID")),
+    rows_after        = nrow(integrated),
+    cols_added        = ncol(clean[[f]]) - 1,   # HouseholdID is not repeated
+    cols_after        = ncol(integrated)
+  ))
+}
+kable(join_log, caption = "Join log: rows and columns at every step")
+```
+
+```{r join-types}
+# Now that every file holds the same households, the join type should not change the result.
+# If it did, some household would be missing from at least one file.
+join_types <- tibble(
+  join_type = c("inner_join", "left_join (keeps every D07 household)", "full_join (keeps every household)"),
+  rows      = c(nrow(reduce(clean, function(x, y) inner_join(x, y, by = "HouseholdID"))),
+                nrow(reduce(clean, function(x, y) left_join(x, y, by = "HouseholdID"))),
+                nrow(reduce(clean, function(x, y) full_join(x, y, by = "HouseholdID"))))
+)
+kable(join_types, caption = "Row count by join type after the key repair")
+stopifnot(n_distinct(join_types$rows) == 1)
+```
+
+An inner join is used because the analytical unit is a household with a complete record across all seven themes. After the key repair, inner, left and full joins all return `r fmt(nrow(integrated))` rows, so the choice of join type excludes no household.
+
+## Validating the integrated dataset
+
+### Structure and grain
+
+```{r validate-structure}
+expected_cols <- sum(map_int(clean, ncol)) - (length(clean) - 1)   # HouseholdID counted once
+suffixed      <- str_detect(names(integrated), "\\.(x|y)$")
+
+structure_checks <- tribble(
+  ~check,                                                  ~value,                                                 ~passes,
+  "Rows equal the households in each source file",         fmt(nrow(integrated)),                                  nrow(integrated) == n_hh,
+  "Distinct HouseholdIDs (one row per household)",         fmt(n_distinct(integrated$HouseholdID)),                n_distinct(integrated$HouseholdID) == nrow(integrated),
+  "HouseholdIDs that are not 18-digit codes",              as.character(sum(!is_id_shaped(integrated$HouseholdID))), all(is_id_shaped(integrated$HouseholdID)),
+  "Columns (source columns with the key counted once)",    paste(ncol(integrated), "of", expected_cols),           ncol(integrated) == expected_cols,
+  "Columns with .x / .y suffixes",                         as.character(sum(suffixed)),                            !any(suffixed),
+  "Repeated column names",                                 as.character(sum(duplicated(names(integrated)))),        !anyDuplicated(names(integrated))
+)
+kable(structure_checks, caption = "Structural checks")
+stopifnot(all(structure_checks$passes))
+```
+
+### Values unchanged by the join
+
+```{r validate-values}
+# Pull each file's columns back out of the integrated table and compare them, household by
+# household, with the file itself. identical() allows no tolerance at all.
+value_checks <- imap_dfr(clean, function(src, f) {
+  src  <- arrange(src, HouseholdID)
+  back <- integrated %>% select(all_of(names(src))) %>% arrange(HouseholdID)
+  tibble(file               = f,
+         columns            = ncol(src),
+         cells_compared     = nrow(src) * ncol(src),
+         columns_identical  = sum(map2_lgl(back, src, identical)),
+         missing_in_source  = sum(is.na(src)),
+         missing_integrated = sum(is.na(back)))
+})
+kable(value_checks, caption = "Every source value survives the join unchanged")
+stopifnot(all(value_checks$columns_identical == value_checks$columns),
+          all(value_checks$missing_in_source == value_checks$missing_integrated))
+```
+
+### Records attached to the right household
+
+Person C kept one copy of each shared descriptor (from D07) and dropped the others. Those raw copies played no part in the join, which makes them an independent test of it. If each file's record was attached to the right household, its raw descriptors must equal the integrated values. For the `r nrow(key_repair)` restored D05 keys, agreement is guaranteed because they were matched on these fields; the other `r fmt(n_hh - nrow(key_repair))` D05 households are a genuine test.
+
+```{r validate-alignment}
+reference <- select(integrated, HouseholdID, all_of(descriptor_cols))
+
+alignment <- imap_dfr(raw_desc[names(raw_desc) != "D07"], function(r, f) {
+  if (f == "D05") r <- restore_keys(r)
+  shared <- intersect(descriptor_cols, names(r))
+  m <- r %>%
+    distinct(HouseholdID, .keep_all = TRUE) %>%
+    inner_join(reference, by = "HouseholdID", suffix = c("_raw", "_integrated"))
+  tibble(file                = f,
+         households_compared = nrow(m),
+         descriptor          = shared,
+         mismatches          = map_int(shared, ~ n_differ(m[[paste0(.x, "_raw")]],
+                                                          m[[paste0(.x, "_integrated")]])))
+})
+
+alignment %>%
+  pivot_wider(names_from = descriptor, values_from = mismatches) %>%
+  kable(caption = "Mismatches between each file's raw descriptors and the integrated record (D09 has no GeoTypeCode)")
+stopifnot(all(alignment$mismatches == 0))
+```
+
+### Coverage and representativeness
+
+```{r validate-coverage}
+coverage <- tibble(
+  dataset             = c("D07 on its own", "Strict inner join (no key repair)", "Integrated dataset"),
+  households          = c(nrow(clean$D07), nrow(strict_join), nrow(integrated)),
+  weighted_households = c(sum(clean$D07$HouseholdWeight), sum(strict_join$HouseholdWeight),
+                          sum(integrated$HouseholdWeight))
+) %>%
+  mutate(pct_of_weighted_total = round(100 * weighted_households / weighted_households[1], 3),
+         weighted_households   = fmt(round(weighted_households)))
+kable(coverage, caption = "Households and survey-weighted households retained")
+
+province_counts <- bind_rows(
+  count(clean$D07,   ProvinceCode, Province) %>% mutate(dataset = "D07"),
+  count(strict_join, ProvinceCode, Province) %>% mutate(dataset = "strict_join"),
+  count(integrated,  ProvinceCode, Province) %>% mutate(dataset = "integrated")
+) %>%
+  pivot_wider(names_from = dataset, values_from = n) %>%
+  mutate(lost_by_strict_join = D07 - strict_join)
+kable(province_counts, caption = "Households by province")
+stopifnot(all(province_counts$integrated == province_counts$D07))
+```
+
+The integrated dataset keeps every household and the full weighted total, so the integration step leaves the survey's representativeness intact. A strict join would have lost households in `r sum(province_counts$lost_by_strict_join > 0)` provinces, a small loss but an unrecorded one.
+
+## Reconciling the Milestone 1 figures
+
+```{r reconcile}
+# Reproduce the Milestone 1 loader: read.csv() with no colClasses reads HouseholdID as a double.
+n_float  <- n_distinct(read.csv(paste0(RAW_DIR, FILES[["D07"]]))$HouseholdID)
+raw_rows <- map_int(raw_desc, nrow)
+
+reconciliation <- tribble(
+  ~figure, ~where_it_appeared, ~what_it_actually_measures,
+  fmt(n_float),
+    "Milestone 1 Data Quality section (unique IDs per file)",
+    "Not a household count. HouseholdID read as a double: distinct 18-digit IDs round onto the same value (reproduced here from raw D07)",
+  paste(fmt(raw_rows[["D04"]]), "/", fmt(raw_rows[["D07"]])),
+    "Raw row counts (D04 / D07 and D09)",
+    paste("Exact duplicate rows appended after row", fmt(n_hh), "- removed by Person C"),
+  fmt(n_hh),
+    "Each cleaned file",
+    "Unique households per file, with HouseholdID read as text",
+  fmt(n_union),
+    "Milestone 1 relationships section (union of IDs)",
+    paste(fmt(n_hh), "real households plus", length(orphan_ids), "D05 placeholder IDs"),
+  fmt(n_common_6),
+    "Milestone 1 relationships section (IDs in common); strict inner join here",
+    paste(fmt(n_hh), "minus the", length(missing_ids), "households whose D05 key was replaced by a placeholder (the same with or without D08)"),
+  fmt(nrow(integrated)),
+    "Final integrated dataset",
+    "Every household, complete across all seven files, after restoring the keys"
+)
+kable(reconciliation, caption = "Every household count in Milestones 1 and 2, explained")
+stopifnot(n_common_6 == n_common_7, nrow(strict_join) == n_common_7)
+```
+
+Milestone 1 reported two conflicting counts, and the work split asked for them to be reconciled:
+
+- **`r fmt(n_float)`** was a float-precision artefact, not a household count. Person C demonstrated it, and it is reproduced above from raw D07.
+- **`r fmt(n_common_6)`** was correct for a strict join. It is the number of IDs shared by the six core files. Deduplication does not change it, because removing a repeated row does not remove its ID. The gap to `r fmt(n_hh)` is the `r length(missing_ids)` D05 records with placeholder keys.
+- **`r fmt(nrow(integrated))`** is the final figure: once those keys are restored, every household appears in all seven files, and no gap is left to explain.
+
+## Files not integrated
+
+```{r not-integrated}
+d01_keys <- read_csv(paste0(RAW_DIR, "D01_Population_Profile.csv"),
+                     col_select = c(HouseholdID, PersonNumber),
+                     col_types  = cols(HouseholdID = col_character(), PersonNumber = col_integer()),
+                     show_col_types = FALSE)
+# D11 (45 MB) is not kept in the repository. When it is present the overlap is recomputed;
+# otherwise it is shown as NA (it was 0 when this notebook was run with D11 in Milestone 2).
+D11_FILE <- paste0(RAW_DIR, "D11_Labour_Market.csv")
+d11_shared <- if (file.exists(D11_FILE)) {
+  d11_keys <- read_csv(D11_FILE, col_select = HouseholdID,
+                       col_types = cols(HouseholdID = col_character()), show_col_types = FALSE)
+  length(intersect(d11_keys$HouseholdID, integrated$HouseholdID))
+} else NA_integer_
+
+# What a row-level join of a person file would do to the household grain
+row_level <- inner_join(select(integrated, HouseholdID), d01_keys,
+                        by = "HouseholdID", relationship = "one-to-many")
+
+tibble(
+  check = c("D01 person rows",
+            "D01 rows with a blank HouseholdID",
+            "Integrated households with at least one D01 person",
+            "Rows if D01 were joined at row level",
+            "Rows per household after a row-level join",
+            paste0("D11 HouseholdIDs that occur in the integrated dataset",
+                   if (is.na(d11_shared)) " (D11 not in this copy; 0 in Milestone 2)" else "")),
+  value = prettyNum(c(nrow(d01_keys),
+                      sum(is.na(d01_keys$HouseholdID)),
+                      n_distinct(row_level$HouseholdID),
+                      nrow(row_level),
+                      round(nrow(row_level) / nrow(integrated), 2),
+                      d11_shared),
+                    big.mark = " ")
+) %>% kable(caption = "Why D01-D03 and D11 stay out of the join")
+```
+
+D01-D03 were excluded in Task 1, and this table shows the join-level reason. Every integrated household has people in D01, but the relationship is many-to-one: a row-level join would turn `r fmt(nrow(integrated))` household rows into `r fmt(nrow(row_level))` person rows and repeat each household's values about `r round(nrow(row_level) / nrow(integrated), 1)` times. D02 and D03 share this person grain. Including them would first need aggregation to one row per household, so no person-level aggregation is performed in this milestone. D11 shares no HouseholdIDs with the GHS households, so it cannot be joined at all.
+
+## Export
+
+```{r export}
+saveRDS(integrated, paste0(OUT_DIR, "household_integrated.rds"))
+write.csv(integrated, paste0(OUT_DIR, "household_integrated.csv"), row.names = FALSE)
+write.csv(join_log,   paste0(OUT_DIR, "join_log_personB.csv"),     row.names = FALSE)
+write.csv(key_repair, paste0(OUT_DIR, "key_repair_log_personB.csv"), row.names = FALSE)
+
+# Read the dataset back the way Person A will and confirm nothing changed on the way to disk.
+stopifnot(identical(readRDS(paste0(OUT_DIR, "household_integrated.rds")), integrated))
+list.files(OUT_DIR)
+```
+
+# Task 3 - Data Dictionary
+
+The dictionary is generated from the integrated dataset itself, so its types, ranges and missing counts cannot drift from the data. It draws on three sources:
+
+- **Descriptions and code lists** come from the Milestone 1 dictionary. Its per-column tables were extracted from `Data_Dictionary.pdf` into `data/reference/M1_data_dictionary_columns.csv`.
+- **Treatments** come from Person C's `qa_log_personC.csv` and the key repair above.
+- **Analysis roles** flag the key, the survey weight, and the food-insecurity items that must never be predictors. They are proposed here for Person A to confirm in Task 4.
+
+`ValidValues` lists codes as Milestone 1 documented them, sentinels included. `M2_Treatment` records which of those codes are now NA, and `ObservedRange` shows what remains after cleaning.
+
+```{r dictionary-inputs}
+m1_dict <- read.csv(paste0(REF_DIR, "M1_data_dictionary_columns.csv"), stringsAsFactors = FALSE)
+qa_log  <- read.csv(paste0(CLEAN_DIR, "qa_log_personC.csv"), stringsAsFactors = FALSE)
+
+# Which cleaned file each integrated column came from (HouseholdID credited to D07, the anchor)
+source_map <- imap_dfr(clean, ~ tibble(Variable = names(.x), SourceFile = .y)) %>%
+  filter(!(Variable == "HouseholdID" & SourceFile != "D07"))
+stopifnot(setequal(source_map$Variable, names(integrated)), !anyDuplicated(source_map$Variable))
+
+# One line per column summarising what Person C did to it
+treatments <- qa_log %>%
+  filter(column != "HouseholdID") %>%
+  group_by(SourceFile = file, Variable = column) %>%
+  summarise(M2_Treatment = paste0(problem, " -> ", treatment, collapse = "; "), .groups = "drop")
+
+# Raw files each column name appeared in, to record which duplicate copies were dropped
+copies <- m1_dict %>%
+  group_by(Variable = Column) %>%
+  summarise(raw_files = list(unique(File)), .groups = "drop")
+
+fi_items <- c("WorriedFoodWouldRunOutCode", "UnableToEatHealthyFoodCode", "AteFewFoodsCode",
+              "SkippedMealCode", "AteLessCode", "RanOutOfFoodCode",
+              "HungryButDidNotEatCode", "WholeDayWithoutEatingCode")
+hunger_related <- c("AdultHungerCode", "ChildHungerCode",
+                    "FewFoodsDays", "SkippedMealDays", "AteLessDays", "RanOutDays")
+
+hypothesis_map <- tribble(
+  ~Variable,                        ~Hypothesis,
+  "ComparativeIncomeCode",          "H1",
+  "GeoTypeCode",                    "H2",
+  "HouseholdSize",                  "H3",
+  "TotalMonthlyHouseholdIncomeRaw", "H2, H3 (income control)",
+  "ElectricityAccessCode",          "H4",
+  "SocialGrantRecipients",          "H5",
+  "MainToiletCode",                 "H6"
+)
+
+key_note <- paste0("Read as text, not as a number (Person C); exact duplicate rows removed (Person C); ",
+                   nrow(key_repair), " D05 placeholder keys restored by row position and descriptor match ",
+                   "(Person B, see key_repair_log_personB.csv)")
+```
+
+```{r dictionary-build}
+# Builds the dictionary for any version of the dataset. Person A can re-run it on the final
+# modelling dataset: columns not found in a source file are marked as engineered.
+build_dictionary <- function(df, engineered = NULL) {
+  profile <- tibble(
+    Variable      = names(df),
+    RType         = map_chr(df, ~ class(.x)[1]),
+    ObservedRange = map_chr(df, function(x) {
+      if (is.numeric(x) && any(!is.na(x))) {
+        paste(fmt(min(x, na.rm = TRUE)), "to", fmt(max(x, na.rm = TRUE)))
+      } else if (is.character(x) || is.factor(x)) {
+        paste(fmt(n_distinct(x, na.rm = TRUE)), "distinct values")
+      } else {
+        "-"
+      }
+    }),
+    Missing_n     = map_int(df, ~ sum(is.na(.x))),
+    Missing_pct   = round(100 * Missing_n / nrow(df), 2),
+    Distinct      = map_int(df, ~ n_distinct(.x, na.rm = TRUE))
+  )
+
+  dict <- profile %>%
+    left_join(source_map, by = "Variable") %>%
+    left_join(select(m1_dict, SourceFile = File, Variable = Column, Description, ValidValues, M1_RawIssue),
+              by = c("SourceFile", "Variable")) %>%
+    left_join(treatments, by = c("SourceFile", "Variable")) %>%
+    left_join(copies, by = "Variable") %>%
+    left_join(hypothesis_map, by = "Variable") %>%
+    mutate(
+      SourceFile   = coalesce(SourceFile, "Engineered"),
+      AnalysisRole = case_when(
+        Variable == "HouseholdID"     ~ "Key - identifies the household, not a predictor",
+        Variable %in% fi_items        ~ "FI Score item - defines the target, never a predictor",
+        Variable %in% hunger_related  ~ "Hunger outcome - leakage risk, not a predictor",
+        Variable == "HouseholdWeight" ~ "Survey weight - for population estimates, not a predictor",
+        Variable == "SurveyYear"      ~ "Constant (2024) - no analytical value",
+        Variable == "Province"        ~ "Label for ProvinceCode - use ProvinceCode in models",
+        SourceFile == "Engineered"    ~ "Engineered variable (Person A)",
+        TRUE                          ~ "Candidate predictor"
+      ),
+      M2_Treatment = case_when(
+        Variable == "HouseholdID"  ~ key_note,
+        SourceFile == "Engineered" ~ NA_character_,
+        is.na(M2_Treatment)        ~ "None logged",
+        TRUE                       ~ M2_Treatment
+      ),
+      Retention = map2_chr(raw_files, SourceFile, function(files, src) {
+        others <- sort(setdiff(files, src))
+        if (src == "Engineered") {
+          "-"
+        } else if (length(others) == 0) {
+          "Only in this file"
+        } else {
+          paste0("Copies in ", paste(others, collapse = ", "), " dropped; this copy kept")
+        }
+      }),
+      Retention = if_else(Variable == "HouseholdID", "Join key - present in all seven files", Retention)
+    )
+
+  if (!is.null(engineered) && nrow(engineered) > 0) {
+    dict <- rows_update(dict,
+                        select(engineered, Variable, Description, ValidValues, M2_Treatment = Derivation),
+                        by = "Variable", unmatched = "ignore")
+  }
+
+  dict %>%
+    mutate(Description = if_else(SourceFile == "Engineered" & is.na(Description),
+                                 "TODO: Person A to describe", Description),
+           across(where(is.character), ~ coalesce(.x, "")),
+           No = row_number()) %>%
+    select(No, Variable, SourceFile, AnalysisRole, Hypothesis, Description, ValidValues,
+           RType, ObservedRange, Missing_n, Missing_pct, Distinct,
+           M1_RawIssue, M2_Treatment, Retention)
+}
+
+data_dictionary <- build_dictionary(integrated)
+
+stopifnot(nrow(data_dictionary) == ncol(integrated),
+          all(data_dictionary$Description != ""))   # every variable is described
+
+datatable(data_dictionary, rownames = FALSE, filter = "top",
+          caption = "BIN381 Milestone 2 data dictionary - integrated household dataset",
+          options = list(pageLength = 25, scrollX = TRUE))
+
+count(data_dictionary, AnalysisRole, name = "variables") %>%
+  kable(caption = "Variables by analysis role")
+```
+
+## Source variables not carried forward
+
+```{r dictionary-excluded}
+excluded_reasons <- tribble(
+  ~Variable,                  ~SourceFile, ~Reason,
+  "SalaryEarnersInHousehold", "D09",       "Not a headcount: more salary earners than people in 13 259 households, plus 9999999 sentinels (Person C, Task 2)",
+  "TotalGrantRecipients",     "D09",       "Not a count: the large values are Rand grant amounts such as 1990 and 480 (Person C, Task 2)"
+)
+
+# Every source column missing from the integrated dataset must have a documented reason.
+# Duplicate copies of retained columns are not listed here; the Retention column covers them.
+excluded <- setdiff(unique(m1_dict$Column), names(integrated))
+stopifnot(setequal(excluded, excluded_reasons$Variable))
+
+kable(excluded_reasons, caption = "Source variables excluded from the integrated dataset")
+```
+
+```{r dictionary-export}
+# write_excel_csv adds a byte-order mark so Excel opens the file with the right encoding
+write_excel_csv(data_dictionary,  paste0(OUT_DIR, "BIN381_M2_Data_Dictionary.csv"))
+write_excel_csv(excluded_reasons, paste0(OUT_DIR, "BIN381_M2_Excluded_Variables.csv"))
+```
+
+## Adding engineered variables
+
+When the final modelling dataset exists, run `build_dictionary()` on it with one row per engineered variable. Any new column left undescribed is labelled `TODO`, so nothing reaches the final dictionary undocumented. The variable names below are placeholders; replace them with the real ones.
+
+```{r dictionary-engineered, eval=FALSE}
+engineered_notes <- tribble(
+  ~Variable,  ~Description,                                            ~ValidValues,                        ~Derivation,
+  "FI_Score", "Food Insecurity Score: number of FI items answered Yes", "0-8",                               "Sum of the 8 FI items coded 1 = Yes (Person A)",
+  "FI_Tier",  "Food insecurity tier",                                   "Secure / Food insecure / Severe",   "FI_Score banded 0 / 1-3 / 4-8 (Person A)"
+)
+final_dictionary <- build_dictionary(final_dataset, engineered_notes)
+write_excel_csv(final_dictionary, paste0(OUT_DIR, "BIN381_M2_Data_Dictionary.csv"))
+```
+
+# Reproducibility
+
+The pipeline has three steps. Each step reads only the previous step's saved output and checks it with `stopifnot()` before using it. A broken handoff therefore stops the knit instead of producing a wrong dataset.
+
+| Step | Notebook | Reads | Writes |
+|------------------|------------------|------------------|------------------|
+| 1 | `BIN 381 Milestone 2 Person C - Data Selection and Cleaning.Rmd` | raw `data/D04`-`D10` CSVs | `data/clean/*_clean.rds`, `qa_log_personC.csv` |
+| 2 | `BIN 381 Milestone 2 Person B - Integration, Construction and Data Dictionary.Rmd` (this file) | `data/clean/*_clean.rds`; raw D01 and D04-D11 as evidence only; `data/reference/M1_data_dictionary_columns.csv` | `data/integrated/household_integrated.rds`, join and key-repair logs, data dictionary |
+| 3 | Person A's feature engineering notebook | `data/integrated/household_integrated.rds` | final modelling dataset, train/test split |
+
+All tables and checks are computed when the document is knitted. The paths are relative, so the notebook runs from the project folder on any machine.
+
+# Ethics and Responsible AI notes arising from integration
+
+- **Restoring keys is an intervention on the data.** The decision rule was fixed before it ran: row position and descriptors had to identify the same household, one-to-one, or the knit stops. All `r nrow(key_repair)` changes are logged with their evidence. A wrong repair would attach one household's water and sanitation record to another household, which is why descriptors alone were not accepted.
+- **A plain inner join would have changed who is represented, with nothing to record it.** It drops `r sum(province_counts$lost_by_strict_join)` households spread over `r sum(province_counts$lost_by_strict_join > 0)` provinces. After the repair, integration removes no household.
+- **HouseholdID is a quasi-identifier.** It encodes geography: its first digit equals `ProvinceCode` for `r round(100 * mean(substr(integrated$HouseholdID, 1, 1) == integrated$ProvinceCode), 1)`% of households, and the remaining digits carry the sampling unit. It should not be a model feature, and it should not appear in the Power BI dashboard next to fine-grained geography.
+- **Survey weights stay with the data.** `HouseholdWeight` is retained and its total is unchanged by integration, so population estimates from the integrated dataset match those from D07.
+
+```{r session-info}
+sessionInfo()
+```

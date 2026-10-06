@@ -1,0 +1,316 @@
+---
+title: "BIN381 Milestone 2 - Person A: Prepare for Modelling"
+author: "Alexander Solomon - Group P1"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+This notebook starts where `BIN 381 Milestone 2 Person B - Integration, Construction and Data Dictionary.Rmd` stops.
+It reads the integrated household dataset from `data/integrated/`,
+constructs and validates the Milestone 3 target variable, removes
+leakage risks, finalises the predictor set from Milestone 1's hypotheses
+(H1-H6), and produces a stratified train/test split. Everything it
+produces goes back to `data/integrated/`.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = FALSE)
+# Paths are relative to the project root; this lets the notebook knit from notebook/ too.
+if (basename(getwd()) == "notebook") knitr::opts_knit$set(root.dir = normalizePath(".."))
+library(tidyverse)
+library(rsample)
+library(knitr)
+
+IN_DIR  <- "data/integrated/"
+OUT_DIR <- "data/integrated/"
+dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
+```
+
+## Load the integrated dataset
+
+```{r load}
+integrated <- readRDS(file.path(IN_DIR, "household_integrated.rds"))
+stopifnot(nrow(integrated) == 20940)
+cat("Households:", nrow(integrated), " Columns:", ncol(integrated), "\n")
+```
+
+## 4.1 Target Variable Construction
+
+The Food Insecurity (FI) Score is the count of "Yes" (code 1) responses
+across eight binary items in D07: `WorriedFoodWouldRunOutCode`,
+`UnableToEatHealthyFoodCode`, `AteFewFoodsCode`, `SkippedMealCode`,
+`AteLessCode`, `RanOutOfFoodCode`, `HungryButDidNotEatCode` and
+`WholeDayWithoutEatingCode`.
+
+The Milestone 1 EDA scored the raw D07 file directly and treated
+sentinel code 9 (don't know/refused) as "No". Person C's Task 2 cleaning
+made a more defensible choice for this integrated dataset: code 9 on
+these items is recoded to a genuine `NA` rather than folded into "No",
+since "don't know/refused" is not evidence of food security. That means
+`FI_Score` here must be computed with missingness in mind, not just
+summed blindly.
+
+`AdultHungerCode` and `ChildHungerCode` are deliberately excluded from
+the score: they use a different frequency scale (codes 1-6) rather than
+binary yes/no, and mixing scales would distort the count. They are close
+proxies for the same construct, so they are treated as leakage risks in
+Section 4.4 below.
+
+```{r fi-items}
+fi_items <- c(
+  "WorriedFoodWouldRunOutCode", "UnableToEatHealthyFoodCode",
+  "AteFewFoodsCode", "SkippedMealCode", "AteLessCode",
+  "RanOutOfFoodCode", "HungryButDidNotEatCode", "WholeDayWithoutEatingCode"
+)
+stopifnot(all(fi_items %in% names(integrated)))
+```
+
+## 4.1a Data Quality Finding: Households With No Valid FI Answers (DQ-11)
+
+Because sentinel 9 is now `NA` rather than "No", a household can have a
+partially or fully missing FI Score -- something the raw-file version of
+this scoring never surfaced. Checking the integrated dataset directly,
+before any scoring is done:
+
+```{r dq11-check}
+na_summary <- integrated %>%
+  mutate(n_missing_items = rowSums(is.na(across(all_of(fi_items))))) %>%
+  count(n_missing_items) %>%
+  arrange(n_missing_items)
+
+kable(na_summary, col.names = c("Missing FI items", "Households"))
+
+n_any_missing <- integrated %>%
+  mutate(n_missing_items = rowSums(is.na(across(all_of(fi_items))))) %>%
+  filter(n_missing_items > 0) %>% nrow()
+n_all_missing <- integrated %>%
+  mutate(n_missing_items = rowSums(is.na(across(all_of(fi_items))))) %>%
+  filter(n_missing_items == 8) %>% nrow()
+
+cat("Households missing >=1 FI item:", n_any_missing, "\n")
+cat("Households missing all 8 FI items (unscorable):", n_all_missing, "\n")
+```
+
+**Problem:** 15 households answered none of the 8 FI items, so no FI
+Score can be computed for them. A set-intersection check against the 15
+HouseholdIDs Person B repaired in Task 3 confirms this is a *different*
+set of 15 households -- a distinct, previously undocumented data-quality
+issue in the FI items themselves, not a symptom of the key-repair.
+
+**Treatment:** `FI_Score` is set to `NA` when zero items are answered,
+rather than defaulted to 0, which would silently and incorrectly record
+these households as food secure. They are then explicitly excluded from
+target construction and model training -- never imputed or guessed.
+
+**Effect:** the modelling population becomes 20,925 of the 20,940
+integrated households (99.93% retained).
+
+```{r fi-score}
+integrated <- integrated %>%
+  mutate(
+    n_fi_answered = rowSums(!is.na(across(all_of(fi_items)))),
+    FI_Score      = if_else(n_fi_answered > 0,
+                            rowSums(across(all_of(fi_items)) == 1, na.rm = TRUE),
+                            NA_real_)
+  )
+
+n_unscorable <- sum(is.na(integrated$FI_Score))
+cat("Excluded as unscorable:", n_unscorable, "\n")
+
+modelling_data <- integrated %>% filter(!is.na(FI_Score))
+cat("Retained for target construction:", nrow(modelling_data), "\n")
+stopifnot(nrow(modelling_data) == 20940 - n_unscorable)
+```
+
+**Verification:** the FI Score distribution on the 20,925 retained
+households, compared against the Milestone 1 raw-file report:
+
+```{r fi-score-dist}
+kable(table(FI_Score = modelling_data$FI_Score), col.names = c("FI_Score", "Households"))
+```
+
+## 4.2 Target Framing Decision
+
+Two candidate framings are derived, both on the 20,925 households with a
+valid FI Score:
+
+```{r target-framing}
+modelling_data <- modelling_data %>%
+  mutate(
+    Vulnerability_Tier = case_when(
+      FI_Score == 0                  ~ "Food secure",
+      FI_Score >= 1 & FI_Score <= 3  ~ "Food insecure",
+      FI_Score >= 4                  ~ "Severely food insecure"
+    ) %>% factor(levels = c("Food secure", "Food insecure", "Severely food insecure")),
+    Food_Insecure_Binary = if_else(FI_Score >= 1, "Insecure", "Secure") %>%
+      factor(levels = c("Secure", "Insecure"))
+  )
+
+cat("3-tier distribution (%):\n")
+print(round(prop.table(table(modelling_data$Vulnerability_Tier)) * 100, 2))
+
+cat("\nBinary distribution (%):\n")
+print(round(prop.table(table(modelling_data$Food_Insecure_Binary)) * 100, 2))
+```
+
+**Decision: the 3-tier framing (Secure / Insecure / Severely insecure)
+is the primary modelling target for Milestone 3.** This matches Business
+Objective 2's own wording -- classifying households into "vulnerability
+tiers" -- more directly than a binary split would, and it lets the
+dashboard in Objective 3 distinguish moderate from severe cases.
+
+**Documented contingency:** the middle tier (Insecure, \~10.5%) is
+noticeably thinner than the other two. If Milestone 3 modelling shows
+the 3-tier classifier cannot reliably separate the Insecure tier from
+its neighbours, the team will fall back to the binary framing (Secure
+vs. Insecure) as a documented, justified simplification rather than
+silently changing the target.
+
+## 4.3 Class Imbalance Assessment
+
+Both framings are moderately imbalanced (majority class \~69.5% either
+way). This is addressed at the train/test split stage (Section 4.6) via
+stratified sampling rather than plain random sampling. If Milestone 3
+model performance on the minority tiers is poor, class weighting or
+resampling (e.g. SMOTE) should be considered then.
+
+## 4.4 Leakage Variables Removed
+
+The following are excluded from the predictor set because they define,
+or closely proxy, the target itself -- cross-checked against Person B's
+data dictionary, which flags the same 8 + 6 columns independently:
+
+```{r leakage-list}
+leakage_vars <- c(fi_items,
+                  "AdultHungerCode", "ChildHungerCode",
+                  "FewFoodsDays", "SkippedMealDays", "AteLessDays", "RanOutDays",
+                  "FI_Score", "n_fi_answered")
+stopifnot(all(leakage_vars[leakage_vars != "FI_Score" & leakage_vars != "n_fi_answered"] %in% names(integrated)))
+print(leakage_vars)
+```
+
+`FI_Score` and `n_fi_answered` are included in this list once
+`Vulnerability_Tier` / `Food_Insecure_Binary` are derived from them: a
+model could otherwise infer the target from how many FI items a
+household answered, not just what they answered.
+
+## 4.5 Predictor Set & Encoding Plan
+
+The predictor set is built around the six hypotheses (H1-H6) from
+Milestone 1, so every retained feature has a stated analytical reason.
+Income is cleaned and log-transformed per Milestone 1's DQ-09 finding
+(right-skewed, sentinel 9999999 already converted to `NA` by Person C's
+Task 2 cleaning):
+
+```{r predictors}
+predictor_vars <- c("ComparativeIncomeCode", "GeoTypeCode", "HouseholdSize",
+                    "ElectricityAccessCode", "SocialGrantRecipients", "MainToiletCode")
+stopifnot(all(predictor_vars %in% names(modelling_data)))
+stopifnot("TotalMonthlyHouseholdIncomeRaw" %in% names(modelling_data))
+
+modelling_data <- modelling_data %>%
+  mutate(
+    Income_Log       = log1p(TotalMonthlyHouseholdIncomeRaw),
+    Income_PerCapita = TotalMonthlyHouseholdIncomeRaw / HouseholdSize
+  )
+
+cat("Income missingness:", sum(is.na(modelling_data$TotalMonthlyHouseholdIncomeRaw)),
+    "of", nrow(modelling_data),
+    sprintf("(%.2f%%)\n", 100 * mean(is.na(modelling_data$TotalMonthlyHouseholdIncomeRaw))))
+
+summary(modelling_data$Income_Log)
+```
+
+| Variable | From | Encoding decision | Notes |
+|------------------|------------------|------------------|------------------|
+| ComparativeIncomeCode | H1 | Ordered factor (as surveyed) | Highest Cramer's V (0.28) of all categorical predictors in Milestone 1. |
+| GeoTypeCode | H2 | Binary factor (urban/rural) | Test for interaction with income per H2's framing. |
+| HouseholdSize | H3 | Numeric; also used to derive per-capita income | Per-capita income = income / HouseholdSize. |
+| TotalMonthlyHouseholdIncomeRaw | H1, H3 | Cleaned (NA already handled by Person C) + log-transformed | Median vs mean confirms right skew (DQ-09); log1p() handles zero income. |
+| ElectricityAccessCode | H4 | Binary factor | Has/doesn't-have access. |
+| SocialGrantRecipients | H5 | Numeric count, plus a derived binary flag | Count may show a dose-response effect a binary flag would miss. |
+| MainToiletCode | H6 | Categorical factor; consider collapsing to improved/unimproved | Matches H6's framing as a poverty proxy. |
+
+## 4.6 Train/Test Split Strategy
+
+A stratified 70/30 split on `Vulnerability_Tier` is used, rather than a
+plain random split, so the minority tiers are proportionally represented
+in both sets. The split runs on the 20,925 households with a valid FI
+Score -- the 15 unscorable households are excluded before splitting, so
+they cannot appear in either set.
+
+```{r split}
+set.seed(381)
+split <- initial_split(modelling_data, prop = 0.7, strata = Vulnerability_Tier)
+train <- training(split)
+test  <- testing(split)
+
+cat("Train:", nrow(train), " Test:", nrow(test), "\n")
+cat("\nTrain tier proportions (%):\n")
+print(round(prop.table(table(train$Vulnerability_Tier)) * 100, 2))
+cat("\nTest tier proportions (%):\n")
+print(round(prop.table(table(test$Vulnerability_Tier)) * 100, 2))
+```
+
+## 4.7 Before/After Validation Evidence
+
+```{r validation}
+cat("Row count accounted for at every step:\n")
+cat("  Integrated households:", nrow(integrated), "\n")
+cat("  Excluded as unscorable:", n_unscorable, "\n")
+cat("  Retained for modelling:", nrow(modelling_data), "\n")
+stopifnot(nrow(train) + nrow(test) == nrow(modelling_data))
+cat("  Train + test == retained:", nrow(train) + nrow(test) == nrow(modelling_data), "\n")
+```
+
+- Row count accounted for at every step: 20,940 integrated households
+  in, 15 excluded as unscorable and logged (Section 4.1a), 20,925
+  retained for target construction and the train/test split.
+- FI Score distribution on the 20,925 retained households matches the
+  Milestone 1 raw-file report within a small margin, confirming NA-aware
+  scoring is consistent with the earlier raw-file scoring.
+- Income summary before/after cleaning shows the extreme right skew
+  removed by the log transform (median well below mean pre-transform).
+- Class balance confirmed numerically for both target framings (Section
+  4.2/4.3).
+- Train/test tier proportions checked against the population split
+  above, confirming stratification held.
+
+## Export
+
+```{r export}
+final_cols <- c("HouseholdID", "FI_Score", "Vulnerability_Tier", "Food_Insecure_Binary",
+                predictor_vars, "Income_Log", "Income_PerCapita")
+stopifnot(all(final_cols %in% names(modelling_data)))
+
+saveRDS(modelling_data[, final_cols], file.path(OUT_DIR, "M2_final_modelling_dataset.rds"))
+write_csv(modelling_data[, final_cols], file.path(OUT_DIR, "M2_final_modelling_dataset.csv"))
+saveRDS(train, file.path(OUT_DIR, "M2_train.rds"))
+saveRDS(test,  file.path(OUT_DIR, "M2_test.rds"))
+
+cat("Exported M2_final_modelling_dataset.rds/csv, M2_train.rds, M2_test.rds to", OUT_DIR, "\n")
+```
+
+## Data dictionary: derived variables
+
+The data dictionary written by Person B's notebook documents the 122 integrated columns. The six
+variables derived in this notebook (`FI_Score`, `n_fi_answered`, `Vulnerability_Tier`,
+`Food_Insecure_Binary`, `Income_Log`, `Income_PerCapita`) were documented by hand in Milestone 2.
+Those rows are kept in `data/reference/M2_derived_variables_dictionary.csv` and appended here, so
+re-running Milestone 2 rebuilds `BIN381_M2_Data_Dictionary.csv` exactly as it was submitted.
+
+```{r dictionary-derived}
+dict_file  <- file.path(OUT_DIR, "BIN381_M2_Data_Dictionary.csv")
+dictionary <- read_csv(dict_file, na = character(), show_col_types = FALSE)
+derived    <- read_csv("data/reference/M2_derived_variables_dictionary.csv", na = character(), show_col_types = FALSE)
+if (!any(derived$Variable %in% dictionary$Variable)) {
+  write_excel_csv(bind_rows(dictionary, derived), dict_file)
+}
+cat("Data dictionary:", nrow(read_csv(dict_file, na = character(), show_col_types = FALSE)), "variables\n")
+```
