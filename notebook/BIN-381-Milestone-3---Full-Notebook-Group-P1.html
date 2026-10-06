@@ -11,7 +11,7 @@
 
 <meta name="author" content="Group P1: Alexander Solomon (Person A), Rudi Jan du Plessis (Person B), Timothy Wubbeling (Person C)" />
 
-<meta name="date" content="2026-10-05" />
+<meta name="date" content="2026-10-06" />
 
 <title>BIN381 Milestone 3 - Modelling, Evaluation and Deployment</title>
 
@@ -2754,7 +2754,7 @@ border-radius: 0px;
 and Deployment</h1>
 <h4 class="author">Group P1: Alexander Solomon (Person A), Rudi Jan du
 Plessis (Person B), Timothy Wubbeling (Person C)</h4>
-<h4 class="date">2026-10-05</h4>
+<h4 class="date">2026-10-06</h4>
 
 </div>
 
@@ -3319,6 +3319,129 @@ stopifnot(&quot;.pred_insecure&quot; %in% names(pred_check))
 saveRDS(final_binary, file.path(OUT_DIR, &quot;final_workflow_binary.rds&quot;))
 cat(&quot;Binary fallback model exported. Columns:&quot;, paste(names(pred_check), collapse = &quot;, &quot;), &quot;\n&quot;)</code></pre>
 <pre><code>## Binary fallback model exported. Columns: .pred_secure, .pred_insecure</code></pre>
+</div>
+<div id="class-weights-compared-with-plain-stratification" class="section level1">
+<h1>1.14 Class Weights Compared with Plain Stratification</h1>
+<p>The work split asks for class imbalance to be handled with class
+weights or stratification, and for the two to be compared. Section 1.7
+computed frequency-inverse class weights; here they are applied. The
+tuned multinomial logistic regression from 1.9 is refitted on the same
+five folds twice: once with stratified folds only (the setting used for
+every model above) and once with the class weights added as case
+weights. Nothing else differs.</p>
+<pre class="r"><code>train_w &lt;- train %&gt;%
+  mutate(case_wt = hardhat::importance_weights(
+    class_weights$weight[match(Vulnerability_Tier, class_weights$Vulnerability_Tier)]))
+
+# Same steps as rec_linear; the importance-weight column gets the case-weights role automatically.
+rec_linear_w &lt;- recipe(Vulnerability_Tier ~ ., data = train_w %&gt;% select(-HouseholdID, -Food_Insecure_Binary)) %&gt;%
+  step_impute_median(all_numeric_predictors()) %&gt;%
+  step_impute_mode(all_nominal_predictors()) %&gt;%
+  step_other(MainToiletCode, threshold = 0.02) %&gt;%
+  step_novel(all_nominal_predictors()) %&gt;%
+  step_dummy(all_nominal_predictors()) %&gt;%
+  step_zv(all_predictors()) %&gt;%
+  step_normalize(all_numeric_predictors())
+
+spec_logistic_best &lt;- finalize_model(spec_logistic, best_logistic)
+
+set.seed(381)
+folds_w &lt;- vfold_cv(train_w, v = 5, strata = Vulnerability_Tier)
+stopifnot(all(map2_lgl(folds$splits, folds_w$splits, ~ identical(.x$in_id, .y$in_id))))  # identical folds
+
+metrics_cw &lt;- metric_set(roc_auc, bal_accuracy, accuracy, brier_class)
+ctrl_cw &lt;- control_resamples(save_pred = TRUE)
+
+res_plain &lt;- fit_resamples(
+  workflow() %&gt;% add_recipe(rec_linear) %&gt;% add_model(spec_logistic_best),
+  resamples = folds, metrics = metrics_cw, control = ctrl_cw)
+res_weighted &lt;- fit_resamples(
+  workflow() %&gt;% add_recipe(rec_linear_w) %&gt;% add_model(spec_logistic_best) %&gt;% add_case_weights(case_wt),
+  resamples = folds_w, metrics = metrics_cw, control = ctrl_cw)</code></pre>
+<pre class="r"><code>summarise_cv &lt;- function(res, label) {
+  m &lt;- collect_metrics(res) %&gt;% select(.metric, mean) %&gt;%
+    pivot_wider(names_from = .metric, values_from = mean)
+  r &lt;- collect_predictions(res) %&gt;%
+    group_by(Vulnerability_Tier) %&gt;%
+    summarise(recall = mean(.pred_class == Vulnerability_Tier), .groups = &quot;drop&quot;) %&gt;%
+    pivot_wider(names_from = Vulnerability_Tier, values_from = recall, names_prefix = &quot;recall_&quot;)
+  bind_cols(tibble(setting = label), m, r)
+}
+class_weight_cmp &lt;- bind_rows(
+  summarise_cv(res_plain,    &quot;Stratified folds only&quot;),
+  summarise_cv(res_weighted, &quot;Stratified folds + class weights&quot;)
+) %&gt;%
+  select(setting, roc_auc, bal_accuracy, accuracy, brier_class,
+         recall_Food_secure, recall_Food_insecure, recall_Severely_food_insecure)
+
+kable(class_weight_cmp, digits = 3,
+      caption = &quot;Multinomial logistic regression, 5-fold CV: with and without class weights&quot;)</code></pre>
+<table>
+<caption>Multinomial logistic regression, 5-fold CV: with and without
+class weights</caption>
+<colgroup>
+<col width="22%" />
+<col width="5%" />
+<col width="8%" />
+<col width="6%" />
+<col width="8%" />
+<col width="13%" />
+<col width="14%" />
+<col width="20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">setting</th>
+<th align="right">roc_auc</th>
+<th align="right">bal_accuracy</th>
+<th align="right">accuracy</th>
+<th align="right">brier_class</th>
+<th align="right">recall_Food_secure</th>
+<th align="right">recall_Food_insecure</th>
+<th align="right">recall_Severely_food_insecure</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Stratified folds only</td>
+<td align="right">0.669</td>
+<td align="right">0.562</td>
+<td align="right">0.715</td>
+<td align="right">0.205</td>
+<td align="right">0.955</td>
+<td align="right">0.000</td>
+<td align="right">0.258</td>
+</tr>
+<tr class="even">
+<td align="left">Stratified folds + class weights</td>
+<td align="right">0.680</td>
+<td align="right">0.623</td>
+<td align="right">0.559</td>
+<td align="right">0.289</td>
+<td align="right">0.597</td>
+<td align="right">0.256</td>
+<td align="right">0.587</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>write_csv(class_weight_cmp, file.path(OUT_DIR, &quot;class_weight_comparison.csv&quot;))
+
+pct &lt;- function(x) sprintf(&quot;%.1f%%&quot;, 100 * x)
+cw &lt;- function(col, row) class_weight_cmp[[col]][row]</code></pre>
+<p>Class weights move the predictions towards the minority tiers. Recall
+for the middle tier rises from 0.0% to 25.6% and for the severe tier
+from 25.8% to 58.7%, but recall for food-secure households falls from
+95.5% to 59.7% and accuracy from 71.5% to 55.9%. Ranking improves only
+slightly (Hand-Till AUC 0.669 against 0.680), while the probabilities
+become much less trustworthy: the Brier score worsens from 0.205 to
+0.289, because the weights distort the base rates the model learns. Even
+with weights, about three in four middle-tier households are still
+missed, which supports the binary fallback in 1.13.</p>
+<p>The unweighted models are therefore kept. Imbalance is handled by
+stratified folds and, for deployment, by a recall-based threshold on
+calibrated probabilities (Person B, Task 2). That reaches the recall
+target without distorting the probabilities the app shows to
+officials.</p>
 <div id="deployed-model" class="section level2">
 <h2>Deployed model</h2>
 <p>The app serves Part A’s binary model (section 1.13). It is copied to
@@ -4791,19 +4914,19 @@ kable(enframe(train_seconds, &quot;model&quot;, &quot;seconds_to_fit&quot;), dig
 <tbody>
 <tr class="odd">
 <td align="left">logistic</td>
-<td align="right">0.7</td>
+<td align="right">1.1</td>
 </tr>
 <tr class="even">
 <td align="left">tree</td>
-<td align="right">0.4</td>
+<td align="right">0.5</td>
 </tr>
 <tr class="odd">
 <td align="left">forest</td>
-<td align="right">6.9</td>
+<td align="right">10.0</td>
 </tr>
 <tr class="even">
 <td align="left">binary</td>
-<td align="right">0.4</td>
+<td align="right">0.7</td>
 </tr>
 </tbody>
 </table>
@@ -4988,7 +5111,7 @@ three-tier columns are blank for the binary model)</caption>
 <td align="right">0.180</td>
 <td align="right">0.012</td>
 <td align="right">-0.001</td>
-<td align="right">0.41</td>
+<td align="right">0.69</td>
 </tr>
 <tr class="even">
 <td align="left">Random forest (ranger)</td>
@@ -5007,7 +5130,7 @@ three-tier columns are blank for the binary model)</caption>
 <td align="right">0.177</td>
 <td align="right">0.012</td>
 <td align="right">0.177</td>
-<td align="right">6.89</td>
+<td align="right">9.98</td>
 </tr>
 <tr class="odd">
 <td align="left">Multinomial logistic (glmnet)</td>
@@ -5026,7 +5149,7 @@ three-tier columns are blank for the binary model)</caption>
 <td align="right">0.180</td>
 <td align="right">0.010</td>
 <td align="right">0.006</td>
-<td align="right">0.74</td>
+<td align="right">1.09</td>
 </tr>
 <tr class="even">
 <td align="left">Decision tree (rpart)</td>
@@ -5045,7 +5168,7 @@ three-tier columns are blank for the binary model)</caption>
 <td align="right">0.187</td>
 <td align="right">0.040</td>
 <td align="right">0.072</td>
-<td align="right">0.37</td>
+<td align="right">0.51</td>
 </tr>
 </tbody>
 </table>
@@ -6223,7 +6346,7 @@ list.files(OUT_DIR)</code></pre>
 ## tzcode source: internal
 ## 
 ## attached base packages:
-## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## [1] stats     graphics  grDevices datasets  utils     methods   base     
 ## 
 ## other attached packages:
 ##  [1] knitr_1.52         glmnet_5.1         Matrix_1.7-5       ranger_0.18.0     
@@ -6251,16 +6374,16 @@ list.files(OUT_DIR)</code></pre>
 ## [37] yaml_2.3.12         timeDate_4052.112   codetools_0.2-20   
 ## [40] listenv_1.0.0       lattice_0.22-9      withr_3.0.3        
 ## [43] S7_0.2.2            evaluate_1.0.5      future_1.75.0      
-## [46] survival_3.8-6      pillar_1.11.1       foreach_1.5.2      
-## [49] generics_0.1.4      vroom_1.7.1         hms_1.1.4          
-## [52] globals_0.19.1      class_7.3-23        glue_1.8.1         
-## [55] tools_4.6.1         data.table_1.18.6.1 gower_1.0.2        
-## [58] grid_4.6.1          ipred_0.9-16        sfd_0.1.0          
-## [61] cli_3.6.6           DiceDesign_1.10     lava_1.9.3         
-## [64] gtable_0.3.6        sass_0.4.10         digest_0.6.39      
-## [67] farver_2.1.2        memoise_2.0.1       htmltools_0.5.9    
-## [70] lifecycle_1.0.5     hardhat_1.4.3       bit64_4.8.6        
-## [73] MASS_7.3-65         sparsevctrs_0.3.6</code></pre>
+## [46] survival_3.8-6      pillar_1.11.1       renv_1.3.0         
+## [49] foreach_1.5.2       generics_0.1.4      vroom_1.7.1        
+## [52] hms_1.1.4           globals_0.19.1      class_7.3-23       
+## [55] glue_1.8.1          tools_4.6.1         data.table_1.18.6.1
+## [58] gower_1.0.2         grid_4.6.1          ipred_0.9-16       
+## [61] sfd_0.1.0           cli_3.6.6           DiceDesign_1.10    
+## [64] lava_1.9.3          gtable_0.3.6        sass_0.4.10        
+## [67] digest_0.6.39       farver_2.1.2        memoise_2.0.1      
+## [70] htmltools_0.5.9     lifecycle_1.0.5     hardhat_1.4.3      
+## [73] bit64_4.8.6         MASS_7.3-65         sparsevctrs_0.3.6</code></pre>
 </div>
 <div id="part-c---deployment-monitoring-and-ethics-timothy-wubbeling" class="section level1">
 <h1>Part C - Deployment, Monitoring and Ethics (Timothy Wubbeling)</h1>
@@ -7333,7 +7456,7 @@ size)</td>
 ## tzcode source: internal
 ## 
 ## attached base packages:
-## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## [1] stats     graphics  grDevices datasets  utils     methods   base     
 ## 
 ## other attached packages:
 ##  [1] knitr_1.52         glmnet_5.1         Matrix_1.7-5       ranger_0.18.0     
@@ -7361,16 +7484,16 @@ size)</td>
 ## [37] yaml_2.3.12         timeDate_4052.112   codetools_0.2-20   
 ## [40] listenv_1.0.0       lattice_0.22-9      withr_3.0.3        
 ## [43] S7_0.2.2            evaluate_1.0.5      future_1.75.0      
-## [46] survival_3.8-6      pillar_1.11.1       foreach_1.5.2      
-## [49] generics_0.1.4      vroom_1.7.1         hms_1.1.4          
-## [52] globals_0.19.1      class_7.3-23        glue_1.8.1         
-## [55] tools_4.6.1         data.table_1.18.6.1 gower_1.0.2        
-## [58] grid_4.6.1          ipred_0.9-16        sfd_0.1.0          
-## [61] cli_3.6.6           DiceDesign_1.10     lava_1.9.3         
-## [64] gtable_0.3.6        sass_0.4.10         digest_0.6.39      
-## [67] farver_2.1.2        memoise_2.0.1       htmltools_0.5.9    
-## [70] lifecycle_1.0.5     hardhat_1.4.3       bit64_4.8.6        
-## [73] MASS_7.3-65         sparsevctrs_0.3.6</code></pre>
+## [46] survival_3.8-6      pillar_1.11.1       renv_1.3.0         
+## [49] foreach_1.5.2       generics_0.1.4      vroom_1.7.1        
+## [52] hms_1.1.4           globals_0.19.1      class_7.3-23       
+## [55] glue_1.8.1          tools_4.6.1         data.table_1.18.6.1
+## [58] gower_1.0.2         grid_4.6.1          ipred_0.9-16       
+## [61] sfd_0.1.0           cli_3.6.6           DiceDesign_1.10    
+## [64] lava_1.9.3          gtable_0.3.6        sass_0.4.10        
+## [67] digest_0.6.39       farver_2.1.2        memoise_2.0.1      
+## [70] htmltools_0.5.9     lifecycle_1.0.5     hardhat_1.4.3      
+## [73] bit64_4.8.6         MASS_7.3-65         sparsevctrs_0.3.6</code></pre>
 </div>
 
 

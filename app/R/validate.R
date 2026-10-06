@@ -7,13 +7,16 @@ PREDICTORS <- c("ComparativeIncomeCode", "GeoTypeCode", "HouseholdSize",
                 "TotalMonthlyHouseholdIncomeRaw", "ElectricityAccessCode",
                 "SocialGrantRecipients", "MainToiletCode")
 
-# The 8 items that build the FI Score, plus the two older GHS hunger items.
-# If an upload contains any of them they are dropped: they define the target
-# and must never reach the model (leakage rule).
+# The 16 leakage columns from Person A's notebook: the 8 items that build the FI Score,
+# the two older GHS hunger items, the four hunger-frequency follow-ups, and the FI Score
+# itself with its count of answered items. If an upload contains any of them they are
+# dropped: they define the target and must never reach the model (leakage rule).
 LEAKAGE_COLS <- c("WorriedFoodWouldRunOutCode", "UnableToEatHealthyFoodCode",
                   "AteFewFoodsCode", "SkippedMealCode", "AteLessCode",
                   "RanOutOfFoodCode", "HungryButDidNotEatCode",
-                  "WholeDayWithoutEatingCode", "AdultHungerCode", "ChildHungerCode")
+                  "WholeDayWithoutEatingCode", "AdultHungerCode", "ChildHungerCode",
+                  "FewFoodsDays", "SkippedMealDays", "AteLessDays", "RanOutDays",
+                  "FI_Score", "n_fi_answered")
 
 # Per-column rules, taken from the Milestone 2 sentinel map and Data_Dictionary.pdf.
 # levels = allowed codes (anything else is an unseen level -> reject).
