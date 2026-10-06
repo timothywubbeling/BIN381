@@ -25,7 +25,7 @@ not an eligibility test** — see *Responsible use* below.
 | `tests/` | `messy_households.csv` (deliberately bad input) and `test_validation.R` |
 | `monitoring/` | `batch_log.csv`, written by the app at run time (not committed): per-upload totals only, no household rows |
 | `docs/` | `figures/` (app screenshots and the deployment workflow diagram used in the report) and `powerbi_build_guide.md` (how to build the Power BI dashboard from `data/powerbi/`) |
-| `report/` | The Milestone 3 report (`BIN381_M3_Report_Group_P1.pdf`, with the editable `.docx`) |
+| `report/` | The Milestone 3 report (`BIN381_M3_Report_Group_P1.pdf`) and the Ethics and Responsible AI Usage Log (`BIN381_M3_Ethics_and_AI_Usage_Log.pdf`), each with its editable `.docx` |
 | `renv/`, `renv.lock` | Pinned package versions (R 4.6.1, 225 packages) |
 
 ## Requirements
