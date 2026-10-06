@@ -1,0 +1,9 @@
+"Metric","Value"
+"Threshold",0.24
+"Recall (at-risk households found)",0.807191245440333
+"Precision (referrals at risk)",0.418761827520952
+"Share of households referred",0.589106545628285
+"ROC-AUC",0.735849795143686
+"PR-AUC",0.549678268995728
+"Brier score",0.180349608023168
+"Test households",6279

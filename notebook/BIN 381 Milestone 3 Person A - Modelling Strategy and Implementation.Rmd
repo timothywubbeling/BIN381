@@ -383,3 +383,69 @@ stopifnot(".pred_insecure" %in% names(pred_check))
 saveRDS(final_binary, file.path(OUT_DIR, "final_workflow_binary.rds"))
 cat("Binary fallback model exported. Columns:", paste(names(pred_check), collapse = ", "), "\n")
 ```
+
+
+# 1.14 Class Weights Compared with Plain Stratification
+
+The work split asks for class imbalance to be handled with class weights or stratification, and for the two to be compared. Section 1.7 computed frequency-inverse class weights; here they are applied. The tuned multinomial logistic regression from 1.9 is refitted on the same five folds twice: once with stratified folds only (the setting used for every model above) and once with the class weights added as case weights. Nothing else differs.
+
+```{r class-weight-fit}
+train_w <- train %>%
+  mutate(case_wt = hardhat::importance_weights(
+    class_weights$weight[match(Vulnerability_Tier, class_weights$Vulnerability_Tier)]))
+
+# Same steps as rec_linear; the importance-weight column gets the case-weights role automatically.
+rec_linear_w <- recipe(Vulnerability_Tier ~ ., data = train_w %>% select(-HouseholdID, -Food_Insecure_Binary)) %>%
+  step_impute_median(all_numeric_predictors()) %>%
+  step_impute_mode(all_nominal_predictors()) %>%
+  step_other(MainToiletCode, threshold = 0.02) %>%
+  step_novel(all_nominal_predictors()) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_zv(all_predictors()) %>%
+  step_normalize(all_numeric_predictors())
+
+spec_logistic_best <- finalize_model(spec_logistic, best_logistic)
+
+set.seed(381)
+folds_w <- vfold_cv(train_w, v = 5, strata = Vulnerability_Tier)
+stopifnot(all(map2_lgl(folds$splits, folds_w$splits, ~ identical(.x$in_id, .y$in_id))))  # identical folds
+
+metrics_cw <- metric_set(roc_auc, bal_accuracy, accuracy, brier_class)
+ctrl_cw <- control_resamples(save_pred = TRUE)
+
+res_plain <- fit_resamples(
+  workflow() %>% add_recipe(rec_linear) %>% add_model(spec_logistic_best),
+  resamples = folds, metrics = metrics_cw, control = ctrl_cw)
+res_weighted <- fit_resamples(
+  workflow() %>% add_recipe(rec_linear_w) %>% add_model(spec_logistic_best) %>% add_case_weights(case_wt),
+  resamples = folds_w, metrics = metrics_cw, control = ctrl_cw)
+```
+
+```{r class-weight-compare}
+summarise_cv <- function(res, label) {
+  m <- collect_metrics(res) %>% select(.metric, mean) %>%
+    pivot_wider(names_from = .metric, values_from = mean)
+  r <- collect_predictions(res) %>%
+    group_by(Vulnerability_Tier) %>%
+    summarise(recall = mean(.pred_class == Vulnerability_Tier), .groups = "drop") %>%
+    pivot_wider(names_from = Vulnerability_Tier, values_from = recall, names_prefix = "recall_")
+  bind_cols(tibble(setting = label), m, r)
+}
+class_weight_cmp <- bind_rows(
+  summarise_cv(res_plain,    "Stratified folds only"),
+  summarise_cv(res_weighted, "Stratified folds + class weights")
+) %>%
+  select(setting, roc_auc, bal_accuracy, accuracy, brier_class,
+         recall_Food_secure, recall_Food_insecure, recall_Severely_food_insecure)
+
+kable(class_weight_cmp, digits = 3,
+      caption = "Multinomial logistic regression, 5-fold CV: with and without class weights")
+write_csv(class_weight_cmp, file.path(OUT_DIR, "class_weight_comparison.csv"))
+
+pct <- function(x) sprintf("%.1f%%", 100 * x)
+cw <- function(col, row) class_weight_cmp[[col]][row]
+```
+
+Class weights move the predictions towards the minority tiers. Recall for the middle tier rises from `r pct(cw("recall_Food_insecure", 1))` to `r pct(cw("recall_Food_insecure", 2))` and for the severe tier from `r pct(cw("recall_Severely_food_insecure", 1))` to `r pct(cw("recall_Severely_food_insecure", 2))`, but recall for food-secure households falls from `r pct(cw("recall_Food_secure", 1))` to `r pct(cw("recall_Food_secure", 2))` and accuracy from `r pct(cw("accuracy", 1))` to `r pct(cw("accuracy", 2))`. Ranking improves only slightly (Hand-Till AUC `r sprintf("%.3f", cw("roc_auc", 1))` against `r sprintf("%.3f", cw("roc_auc", 2))`), while the probabilities become much less trustworthy: the Brier score worsens from `r sprintf("%.3f", cw("brier_class", 1))` to `r sprintf("%.3f", cw("brier_class", 2))`, because the weights distort the base rates the model learns. Even with weights, about three in four middle-tier households are still missed, which supports the binary fallback in 1.13.
+
+The unweighted models are therefore kept. Imbalance is handled by stratified folds and, for deployment, by a recall-based threshold on calibrated probabilities (Person B, Task 2). That reaches the recall target without distorting the probabilities the app shows to officials.

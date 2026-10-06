@@ -15,15 +15,16 @@ not an eligibility test** — see *Responsible use* below.
 | `data/raw/` | Stats SA source CSVs D01–D10 (included; this repo is private). D11 is not used and not included. |
 | `data/clean/` | Milestone 2 cleaned files (`D04_clean.rds` … `D10_clean.rds`) and the QA log |
 | `data/integrated/` | Milestone 2 integrated household dataset (20,940 households), the modelling dataset (20,925 households with an FI Score), the train/test split and the data dictionary |
-| `data/modelling/` | Person A: fitted candidate workflows, CV and test predictions, model parameter table, input schema |
+| `data/modelling/` | Person A: fitted candidate workflows, CV and test predictions, model parameter table, input schema, class-weight comparison |
 | `data/evaluation/` | Person B: evaluation matrix, metrics, thresholds, calibration, subgroup performance, monitoring baseline, figures |
+| `data/powerbi/` | Tables for the Power BI dashboard: all 20,925 households scored by the deployed model, model summary, subgroup performance, drivers, and the R reconciliation table |
 | `notebook/` | `BIN 381 Milestone 3 - Full Notebook (Group P1).Rmd` runs Parts A, B and C end to end; the three part notebooks (A modelling, B evaluation, C deployment, monitoring and ethics) with knitted HTML; the Milestone 2 cleaning notebook; `M1_EDA.Rmd` |
 | `models/` | `final_workflow.rds` (the deployed model, a copy of `data/modelling/final_workflow_binary.rds`), `reference.rds` (training reference for explanations and drift checks) and `CHANGELOG.md` (model versions, how to add one and how to roll back) |
 | `app/` | Shiny app: `app.R` plus `R/validate.R`, `R/score.R`, `R/monitor.R` |
-| `R/` | Person C checks: `check_app_matches_model.R`, `fairness_check.R`, `review_monitoring.R`, `make_reference.R` |
+| `R/` | Person C checks: `check_app_matches_model.R`, `fairness_check.R`, `review_monitoring.R`, `make_reference.R`; `export_powerbi.R` builds `data/powerbi/` |
 | `tests/` | `messy_households.csv` (deliberately bad input) and `test_validation.R` |
 | `monitoring/` | `batch_log.csv`, written by the app at run time (not committed): per-upload totals only, no household rows |
-| `docs/figures/` | App screenshots and the deployment workflow diagram used in the report |
+| `docs/` | `figures/` (app screenshots and the deployment workflow diagram used in the report) and `powerbi_build_guide.md` (how to build the Power BI dashboard from `data/powerbi/`) |
 | `renv/`, `renv.lock` | Pinned package versions (R 4.6.1, 225 packages) |
 
 ## Requirements
@@ -64,7 +65,9 @@ not an eligibility test** — see *Responsible use* below.
    ```r
    shiny::runApp("app")
    ```
-7. **Try it:** open *Batch upload*, upload `tests/messy_households.csv`, and check that
+7. **Power BI tables** (optional): `source("R/export_powerbi.R")` rebuilds `data/powerbi/`; build the
+   dashboard with `docs/powerbi_build_guide.md`.
+8. **Try it:** open *Batch upload*, upload `tests/messy_households.csv`, and check that
    the issues table lists the sentinel codes, the unseen code, the text value and the
    duplicate ID.
 

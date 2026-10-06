@@ -1,0 +1,19 @@
+"Breakdown","Group","Households","AtRiskPct_unweighted","AtRiskPct_weighted","SeverePct_weighted","ReferredPct"
+"All","All households",20925,30.6,28.3,18.6,59.2
+"Province","Eastern Cape",2697,43.8,43,23.8,71.9
+"Province","Free State",1275,28.9,28.2,20.8,65
+"Province","Gauteng",5524,28.6,25.6,15.7,54.6
+"Province","KwaZulu-Natal",3256,30.3,27.5,21.2,59
+"Province","Limpopo",2384,13.1,13.1,4.8,59.7
+"Province","Mpumalanga",1671,36.4,35.5,27,64.6
+"Province","North West",1332,37.8,37.1,27.1,62.2
+"Province","Northern Cape",855,42.1,40.5,31.7,60.9
+"Province","Western Cape",1931,25.5,24.3,15.2,42.6
+"Settlement","Farms",721,30.8,29.2,20.7,57.1
+"Settlement","Traditional/tribal",6562,34.8,35.1,24.7,68.5
+"Settlement","Urban",13642,28.5,25.7,16.2,54.8
+"IncomeBand","< R2,500",5523,43.1,42.9,33.7,86
+"IncomeBand","> R11,500",5056,13.2,11.5,5.1,16.9
+"IncomeBand","R2,500-5,000",4685,36.4,34.5,21.9,75.9
+"IncomeBand","R5,000-11,500",5213,29.8,27.2,15.7,58.2
+"IncomeBand","Unknown",448,19.4,17.9,12,42

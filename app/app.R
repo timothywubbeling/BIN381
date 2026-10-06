@@ -19,6 +19,20 @@ CAVEAT <- paste(
 
 code_choices <- function(labels) c("Unknown" = "", setNames(seq_along(labels), labels))
 
+# GHS 2024 household file, variable san_toil, codes 1-12 (DataFirst metadata, zaf-statssa-ghs-2024-v1)
+TOILET_LABELS <- c("Flush toilet: public sewerage",
+                   "Flush toilet: septic or conservancy tank",
+                   "Pour/bucket-flush toilet: septic tank or seepage pit",
+                   "Chemical/portable toilet",
+                   "Pit latrine with ventilation pipe (VIP)",
+                   "Pit latrine without ventilation pipe, with slab",
+                   "Pit latrine without ventilation pipe, no slab or open pit",
+                   "Bucket toilet (collected by municipality)",
+                   "Bucket toilet (emptied by household)",
+                   "Composting toilet",
+                   "Open defecation (no facility)",
+                   "Other toilet facility")
+
 ui <- page_navbar(
   title = "Household food-insecurity screening (prototype)",
   nav_panel("Score one household",
@@ -34,8 +48,8 @@ ui <- page_navbar(
         checkboxInput("income_unknown", "Income refused / unknown"),
         selectInput("ElectricityAccessCode", "Electricity access", code_choices(c("Yes", "No"))),
         numericInput("SocialGrantRecipients", "Social-grant recipients in household", 0, min = 0, max = 16),
-        selectInput("MainToiletCode", "Main toilet facility (GHS code)",
-                    code_choices(paste("Code", 1:12))),   # replace with GHS 2024 labels
+        selectInput("MainToiletCode", "Main toilet facility",
+                    code_choices(TOILET_LABELS)),
         actionButton("score_one", "Score household", class = "btn-primary")
       ),
       card(card_header("Result"), uiOutput("one_result")),
