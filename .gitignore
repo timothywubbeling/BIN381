@@ -5,3 +5,5 @@ data/raw/D11_Labour_Market.csv
 .Rproj.user/
 # Written by the app at run time (per-upload totals); not part of the code
 monitoring/batch_log.csv
+# Word lock files
+~$*
