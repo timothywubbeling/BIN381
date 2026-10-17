@@ -1,0 +1,11 @@
+Dataset,Domain,Grain,Rows,Columns,Households,DuplicateRows,Selected,Reason
+D01,Population profile,Person,70440,17,20941,0,No,"Person-level: about 3.4 rows per household, so it cannot join one-to-one on HouseholdID"
+D02,Learning profile,Person,70462,23,20940,0,No,"Person-level: about 3.4 rows per household, so it cannot join one-to-one on HouseholdID"
+D03,Economic participation,Person,70460,25,20940,0,No,"Person-level: about 3.4 rows per household, so it cannot join one-to-one on HouseholdID"
+D04,Dwelling conditions,Household,20956,23,20940,16,Yes,Household-level: joined on HouseholdID; 16 exact duplicate rows removed
+D05,Basic services,Household,20940,27,20940,0,Yes,Household-level: joined on HouseholdID; no duplicate rows
+D06,Household energy,Household,20940,19,20940,0,Yes,Household-level: joined on HouseholdID; no duplicate rows
+D07,Household wellbeing,Household,20955,22,20940,15,Yes,Household-level: joined on HouseholdID; 15 exact duplicate rows removed
+D08,Connectivity and access,Household,20940,18,20940,0,Yes,Household-level: joined on HouseholdID; no duplicate rows
+D09,Household resources,Household,20955,34,20940,15,Yes,Household-level: joined on HouseholdID; 15 exact duplicate rows removed
+D10,Mobility and access,Household,20940,21,20940,0,Yes,Household-level: joined on HouseholdID; no duplicate rows

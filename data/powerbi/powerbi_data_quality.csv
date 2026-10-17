@@ -1,0 +1,116 @@
+Dataset,Domain,Column,Problem,Treatment,Before,After
+D04,Dwelling conditions,HouseholdID,Duplicate household records (exact row copies),"distinct(HouseholdID, .keep_all = TRUE)",20956,20940
+D05,Basic services,HouseholdID,Duplicate household records (exact row copies),"distinct(HouseholdID, .keep_all = TRUE)",20940,20940
+D06,Household energy,HouseholdID,Duplicate household records (exact row copies),"distinct(HouseholdID, .keep_all = TRUE)",20940,20940
+D07,Household wellbeing,HouseholdID,Duplicate household records (exact row copies),"distinct(HouseholdID, .keep_all = TRUE)",20955,20940
+D08,Connectivity and access,HouseholdID,Duplicate household records (exact row copies),"distinct(HouseholdID, .keep_all = TRUE)",20940,20940
+D09,Household resources,HouseholdID,Duplicate household records (exact row copies),"distinct(HouseholdID, .keep_all = TRUE)",20955,20940
+D10,Mobility and access,HouseholdID,Duplicate household records (exact row copies),"distinct(HouseholdID, .keep_all = TRUE)",20940,20940
+D04,Dwelling conditions,Province,"Free-text province with padding and inconsistent case (' Gauteng ', 'GAUTENG')",Rebuilt from the clean numeric ProvinceCode via lookup,29,9
+D05,Basic services,Province,"Free-text province with padding and inconsistent case (' Gauteng ', 'GAUTENG')",Rebuilt from the clean numeric ProvinceCode via lookup,26,9
+D06,Household energy,Province,"Free-text province with padding and inconsistent case (' Gauteng ', 'GAUTENG')",Rebuilt from the clean numeric ProvinceCode via lookup,26,9
+D07,Household wellbeing,Province,"Free-text province with padding and inconsistent case (' Gauteng ', 'GAUTENG')",Rebuilt from the clean numeric ProvinceCode via lookup,9,9
+D08,Connectivity and access,Province,"Free-text province with padding and inconsistent case (' Gauteng ', 'GAUTENG')",Rebuilt from the clean numeric ProvinceCode via lookup,31,9
+D09,Household resources,Province,"Free-text province with padding and inconsistent case (' Gauteng ', 'GAUTENG')",Rebuilt from the clean numeric ProvinceCode via lookup,9,9
+D10,Mobility and access,Province,"Free-text province with padding and inconsistent case (' Gauteng ', 'GAUTENG')",Rebuilt from the clean numeric ProvinceCode via lookup,28,9
+D05,Basic services,TimeToWaterRaw,Numeric codes stored as text with 'Unknown'/'not recorded' tokens,as.numeric(); text tokens become NA,0,25
+D06,Household energy,CookingEnergyCode,Numeric codes stored as text with 'Unknown'/'not recorded' tokens,as.numeric(); text tokens become NA,0,25
+D09,Household resources,TotalVehicles,Numeric codes stored as text with 'Unknown'/'not recorded' tokens,as.numeric(); text tokens become NA,0,22
+D04,Dwelling conditions,WallMaterialCode,Sentinel codes (99) = Unspecified,Recoded to NA,55,56
+D04,Dwelling conditions,RoofMaterialCode,Sentinel codes (99) = Unspecified,Recoded to NA,0,13
+D04,Dwelling conditions,TotalRooms,Sentinel codes (99) = Unspecified,Recoded to NA,0,5
+D04,Dwelling conditions,TenureCode,Sentinel codes (99) = Unspecified,Recoded to NA,0,1
+D04,Dwelling conditions,RoofConditionCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,1
+D04,Dwelling conditions,FloorConditionCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,1
+D04,Dwelling conditions,RDPHousingCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,1
+D04,Dwelling conditions,HousingSubsidyCode,Sentinel codes (8/9) = NA / Unspecified,Recoded to NA,0,4082
+D04,Dwelling conditions,RentRaw,Sentinel codes (88/99) = Not applicable / Unspecified,Recoded to NA,0,15753
+D05,Basic services,WaterSafeCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D05,Basic services,WaterClearCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D05,Basic services,WaterTasteCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D05,Basic services,WaterSmellCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D05,Basic services,WaterTreatmentCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D05,Basic services,MunicipalWaterSourceCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D05,Basic services,WaterMeterCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,4839
+D05,Basic services,PaysForWaterCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,4839
+D05,Basic services,WaterInterruptions12MonthsCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,4839
+D05,Basic services,WaterInterruptionFrequencyCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,11658
+D05,Basic services,ToiletDistanceCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,20255
+D05,Basic services,DistanceToWaterCode,Sentinel codes (8/9) = NA / Unspecified,Recoded to NA,0,16747
+D05,Basic services,TimeToWaterRaw,Sentinel codes (8/9) = NA / Unspecified,Recoded to NA,25,16752
+D05,Basic services,PipedWaterCode,Sentinel codes (8/9) = NA / Unspecified,Recoded to NA,0,16747
+D05,Basic services,SharedToiletCode,Sentinel codes (8/9) = NA / Unspecified,Recoded to NA,0,165
+D05,Basic services,ToiletLocationCode,Sentinel codes (8/9) = NA / Unspecified,Recoded to NA,0,165
+D05,Basic services,HandwashingFacilityCode,Sentinel codes (8/9) = NA / Unspecified,Recoded to NA,0,165
+D05,Basic services,HandwashingCode,Sentinel codes (8/9) = NA / Unspecified,Recoded to NA,0,165
+D05,Basic services,WaterAlternativeSourceCode,Sentinel codes (88) = Not applicable,Recoded to NA,0,15356
+D05,Basic services,MainToiletCode,Sentinel codes (99) = Unspecified,Recoded to NA,0,2
+D06,Household energy,ElectricityAccessCode,Sentinel codes (9) = Unspecified,Recoded to NA,50,52
+D06,Household energy,LoadsheddingFrequencyCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D06,Household energy,SolarGeyserAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D06,Household energy,SolarPanelAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D06,Household energy,MainElectricitySourceCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,1058
+D06,Household energy,MainsElectricityCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,1175
+D06,Household energy,ElectricitySupplyCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,1836
+D06,Household energy,PaysForElectricityCode,Sentinel codes (8) = Not applicable,Recoded to NA,0,1836
+D06,Household energy,AlternativeLightingCode,Sentinel codes (88) = Not applicable,Recoded to NA,0,13177
+D06,Household energy,AlternativeCookingCode,Sentinel codes (88) = Not applicable,Recoded to NA,0,13177
+D07,Household wellbeing,AdultHungerCode,Sentinel codes (9) = Unspecified,Recoded to NA,65,67
+D07,Household wellbeing,ChildHungerCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D07,Household wellbeing,WorriedFoodWouldRunOutCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,29
+D07,Household wellbeing,UnableToEatHealthyFoodCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,31
+D07,Household wellbeing,AteFewFoodsCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,19
+D07,Household wellbeing,SkippedMealCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,24
+D07,Household wellbeing,AteLessCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,29
+D07,Household wellbeing,RanOutOfFoodCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,29
+D07,Household wellbeing,HungryButDidNotEatCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,28
+D07,Household wellbeing,WholeDayWithoutEatingCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,32
+D07,Household wellbeing,FewFoodsDays,Sentinel codes (8) = Not applicable,Recoded to NA,0,15823
+D07,Household wellbeing,SkippedMealDays,Sentinel codes (8) = Not applicable,Recoded to NA,0,17384
+D07,Household wellbeing,AteLessDays,Sentinel codes (8) = Not applicable,Recoded to NA,0,16798
+D07,Household wellbeing,RanOutDays,Sentinel codes (8) = Not applicable,Recoded to NA,0,17108
+D07,Household wellbeing,TotalMonthlyHouseholdIncomeRaw,Sentinel codes (9999999/99999999/999999999/9999999999) = Refused / not recorded,Recoded to NA,0,451
+D08,Connectivity and access,TelephoneCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D08,Connectivity and access,FixedInternetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D08,Connectivity and access,MobileInternetCode,Sentinel codes (9) = Unspecified,Recoded to NA,60,62
+D08,Connectivity and access,PublicWiFiInternetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D08,Connectivity and access,StudyInternetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D08,Connectivity and access,WorkInternetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D08,Connectivity and access,LibraryInternetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D08,Connectivity and access,CafeInternetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D08,Connectivity and access,ComputerAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,NoIncomeCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,1
+D09,Household resources,ComparativeIncomeCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,VehicleAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,TVAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,PayTVAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,ComputerAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,WashingMachineAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,FreezerAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,FridgeAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,MicrowaveAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,GeyserAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,RadioAssetCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,3
+D09,Household resources,MainIncomeSourceCode,Sentinel codes (99) = Unspecified,Recoded to NA,65,69
+D09,Household resources,ExpenditureBandCode,Sentinel codes (99) = Unspecified,Recoded to NA,0,3
+D09,Household resources,SocialGrantRecipients,Sentinel codes (99) = Unspecified,Recoded to NA,0,1
+D09,Household resources,TotalVehicles,Sentinel codes (88/99) = Not applicable / Unspecified,Recoded to NA,22,15250
+D09,Household resources,RequiredIncomeRaw,Sentinel codes (9999999/99999999/999999999/9999999999) = Not applicable,Recoded to NA,0,163
+D10,Mobility and access,TaxiUseCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D10,Mobility and access,BusUseCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D10,Mobility and access,TrainUseCode,Sentinel codes (9) = Unspecified,Recoded to NA,0,2
+D10,Mobility and access,TransportToHealthFacilityCode,Sentinel codes (9) = Unspecified,Recoded to NA,55,57
+D10,Mobility and access,TaxiTrips,Sentinel codes (888) = Not applicable,Recoded to NA,0,13682
+D10,Mobility and access,TaxiDistanceRaw,Sentinel codes (888) = Not applicable,Recoded to NA,0,13682
+D10,Mobility and access,BusTrips,Sentinel codes (888) = Not applicable,Recoded to NA,0,20122
+D10,Mobility and access,BusDistanceRaw,Sentinel codes (888) = Not applicable,Recoded to NA,0,20122
+D10,Mobility and access,TrainTrips,Sentinel codes (888) = Not applicable,Recoded to NA,0,20859
+D10,Mobility and access,TrainDistanceRaw,Sentinel codes (888) = Not applicable,Recoded to NA,0,20859
+D10,Mobility and access,TaxiCostRaw,Sentinel codes (8888/9999) = Not applicable / Unspecified,Recoded to NA,0,13689
+D10,Mobility and access,BusCostRaw,Sentinel codes (8888/9999) = Not applicable / Unspecified,Recoded to NA,0,20139
+D10,Mobility and access,TrainCostRaw,Sentinel codes (8888/9999) = Not applicable / Unspecified,Recoded to NA,0,20859
+D10,Mobility and access,NearestHealthFacilityCode,Sentinel codes (99) = Unspecified,Recoded to NA,0,2
+D04,Dwelling conditions,HouseholdSize,Household size of 0 is impossible,Recode 0 to NA (8 and 9 retained as valid sizes),12,0
+D07,Household wellbeing,HouseholdSize,Household size of 0 is impossible,Recode 0 to NA (8 and 9 retained as valid sizes),10,0
+D08,Connectivity and access,HouseholdSmartphones,Negative counts (-20 to -1) are impossible,Recode negatives to NA,15,0
+D10,Mobility and access,TimeToHealthFacilityRaw,Negative values and code 9 outside valid 1-5 band,"Restrict to 1:5, remainder to NA",17,0
