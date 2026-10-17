@@ -21,9 +21,9 @@ Timing: roughly 1 minute on slide 5, 1 minute on slide 6, 2–3 minutes on the s
 | **58.9%** | of households sent for follow-up |
 | **0.736** | ROC-AUC (0.5 would be a coin flip) |
 
-Chart: the threshold trade-off curve — recall and share-referred against threshold, with a marker
-at 0.24. (Screenshot the what-if panel from the dashboard, or plot the table in
-`docs/powerbi_m4_person_b_pages.md` §5.)
+Chart: the threshold trade-off — crop the what-if panel and score-distribution chart from
+`docs/figures/pbi_b1_performance.png`, or plot the verification table in
+`docs/powerbi_m4_person_b_pages.md` §6.
 
 Footer line: *Measured once on a held-out test set of 6,279 households.*
 
@@ -92,30 +92,30 @@ Footer line: *Measured once on a held-out test set of 6,279 households.*
 
 ## Slide 7 — "Dashboard demo: setting the threshold against real capacity"
 
-**On the slide** — a screenshot of the "How well the screen works" page as the backup, and three
-bullet lines naming what you are about to show. Keep the live dashboard already open on a second
+**On the slide** — `docs/figures/pbi_b1_performance.png` as the backup, and three bullet lines
+naming what you are about to show. Keep the live dashboard already open on a second
 window before you start.
 
-- Where the need is, by province and settlement type
-- How well the screen works — and what a different threshold would cost
-- Which households it misses
+- How well the screening tool works — and what a different threshold would cost
+- Which households the screen misses
+- What to ask about to spot risk early
 
 **Demo script (2–3 minutes, do not improvise)**
 
-1. **Open on the landing page.** "Six decision questions. Every page answers one of them —
+1. **Open on the Overview page.** "Six decision questions. Every page answers one of them —
    that was the design rule."
-2. **Go to 'How well the screen works'.** Point at the four cards. "These are the numbers from
+2. **Go to 'How well does the screening tool work?'.** Point at the four cards. "These are the numbers from
    slide 5, live from the final dataset."
-3. **Move the threshold slicer from 0.24 to 0.30.** "Recall drops from 80.7% to 67.8%, referrals
+3. **Type 0.30 into the threshold slider box and press Enter** (dragging is fiddly on a projector). "Recall drops from 80.7% to 67.8%, referrals
    drop from 59% to 44%. That is 150 fewer households per thousand to visit, and about one in eight
    at-risk households newly missed. This is the conversation we want programme managers to have
    with us, and it is why the dial is in the tool rather than in a footnote."
 4. **Put it back to 0.24.**
-5. **Go to 'Who the screen misses'.** Cycle the `variable` slicer: Monthly income → Grant receipt
-   → Province. "Same chart, five different cuts. The band is our agreed 10-point tolerance. Income
+5. **Go to 'Which households does the screen miss?'.** Click through the 'Break the screen down by'
+   slicer: Monthly income → Grant receipt → Province. "Same chart, five different cuts. The band is our agreed 10-point tolerance. Income
    above R11,500 sits far outside it, and that is a documented limitation, not a surprise."
-6. **Go to 'What drives risk'.** "Income change at the top, and the odds-ratio table underneath
-   with confidence intervals, because a direction without an interval is not evidence."
+6. **Go to 'What should we ask about to spot risk early?'.** "Income change at the top, and the
+   odds-ratio table beside it with confidence intervals, because a direction without an interval is not evidence."
 7. **Hand to Timothy** for the Shiny app on slide 8.
 
 **If the live demo fails:** the screenshots on slides 5–7 carry the same three numbers. Say

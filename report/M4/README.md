@@ -10,9 +10,9 @@ Person B's share of Milestone 4, per the team guideline and the official brief:
 | Report §4 Evaluation and key findings | Draft ready | `BIN381_M4_PersonB_Sections_4_6_8.docx` |
 | Report §6 Recommendations | Draft ready | same |
 | Report §8 Limitations and future work | Draft ready | same |
-| Power BI: model-performance, subgroup and drivers pages | **Spec ready, `.pbix` not built** | `../../docs/powerbi_m4_person_b_pages.md` |
+| Power BI: Overview + model-performance, subgroup and drivers pages | Built and reconciled (17 Oct) | `../../powerbi/BIN381_M4_Dashboard.pbix`, guide in `../../docs/powerbi_m4_person_b_pages.md` |
 | Slides 5–7 + dashboard demo | Draft ready | `BIN381_M4_PersonB_Slides_5_to_7.md` |
-| Reflection, ethics entries, AI log | Draft ready — **needs Rudi's sign-off** | `BIN381_M4_PersonB_Reflection_and_AI_Log.md` |
+| Reflection, ethics entries, AI log (now includes AI-M4-7, the dashboard build) | Draft ready — **needs Rudi's sign-off** | `BIN381_M4_PersonB_Reflection_and_AI_Log.md` |
 | Check the evaluation numbers quoted anywhere | Passing | `check_numbers.py` |
 
 ## Rebuilding
@@ -30,12 +30,12 @@ time, so the report cannot drift from the notebook. If the model is ever retrain
 
 ## What is still outstanding
 
-1. **The `.pbix` itself.** Person B's three pages are fully specified with DAX and expected values
-   in `docs/powerbi_m4_person_b_pages.md`, but they have to be built in Power BI Desktop by hand.
-   Budget about 1.5–2 hours. Start a **new** file — `Main Dash.pbix` is the Milestone 1/2
-   dashboard built on the raw `D0x` tables, not on the final analytical dataset.
-2. **Screenshots** of the three pages for report §5 and slides 5–7, into `docs/figures/`.
-3. **Rudi's sign-off** on the AI log in `BIN381_M4_PersonB_Reflection_and_AI_Log.md`.
+1. **Rudi's sign-off** on the AI log in `BIN381_M4_PersonB_Reflection_and_AI_Log.md` (AI-M4-7 records
+   that the assistant built the dashboard pages).
+2. **Alexander's two dashboard pages** ("Where the need is", "Who is affected"). Recommendation 4 in
+   §6 promises a province drill-down "on the dashboard"; it only becomes true once those exist.
+3. **The slide deck itself.** Slides 5–7 exist as notes only; screenshots for them are in
+   `docs/figures/pbi_b*.png`.
 4. **Hand to Timothy** for merging into the final report, with the cover page, contents,
    references and the 10-page check.
 
