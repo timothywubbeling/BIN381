@@ -1,0 +1,170 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "c520f284da24a71060ef",
+  "position": {
+    "x": 648,
+    "y": 466,
+    "z": 380,
+    "height": 224,
+    "width": 616,
+    "tabOrder": 380
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "What the threshold decides",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "12pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "6pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Lower the threshold and the screen finds more at-risk households but sends more for follow-up. Raise it and fewer visits are wasted, but more people at risk are missed. At 0.14 recall reaches 95.9% and 83.8% of households are referred; at 0.40 recall falls to 47.4% for 26.2% referred.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "10pt",
+                      "color": "#D2D0CE"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Recall and precision are measured only on the 6,279 held-out test households. The 59.2% referral rate quoted on the household pages covers all 20,925 households, train and test - both figures are right, for different populations.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Screening aid only. A referral is a request for a human visit, and a lower score is not clearance.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "10pt",
+                      "color": "#FCB714",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#605E5C'"
+                    }
+                  }
+                }
+              }
+            },
+            "radius": {
+              "expr": {
+                "Literal": {
+                  "Value": "6D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#3B3A39'"
+                    }
+                  }
+                }
+              }
+            },
+            "transparency": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "b0a7bb31e82b3a54ca2f",
+  "position": {
+    "x": 964,
+    "y": 218,
+    "z": 730,
+    "height": 232,
+    "width": 300,
+    "tabOrder": 730
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "How this check works",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "12pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "6pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "The dashboard measures recompute each percentage from the 20,925 household rows. The R columns are looked up from powerbi_reconciliation.csv, written straight out of the evaluation notebook.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#D2D0CE"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Because the two are computed independently, any difference other than 0.0 means the export, the model or a measure has moved.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#D2D0CE"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "The same check runs headlessly in report/M4/check_numbers.py, which fails the build if the figures drift.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#605E5C'"
+                    }
+                  }
+                }
+              }
+            },
+            "radius": {
+              "expr": {
+                "Literal": {
+                  "Value": "6D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#3B3A39'"
+                    }
+                  }
+                }
+              }
+            },
+            "transparency": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

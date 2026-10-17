@@ -1,0 +1,68 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "82e970980e1ed4f2f907",
+  "position": {
+    "x": 932,
+    "y": 12,
+    "z": 9004,
+    "height": 58,
+    "width": 332,
+    "tabOrder": 9004
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "TEST SET ONLY",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#FCB714",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "right"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "6,279 held-out households, 1,919 at risk",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "right"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -1,0 +1,318 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "bc6a01745ac507930780",
+  "position": {
+    "x": 16,
+    "y": 218,
+    "z": 50,
+    "height": 472,
+    "width": 616,
+    "tabOrder": 50
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "The six decision questions this dashboard answers",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "12pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "6pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "1   Where are food-insecure households concentrated?",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "11pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "      Page: Where the need is",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "2   Which kinds of household are most affected?",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "11pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "      Page: Who is affected",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "3   Can we trust the screening tool enough to act on it?",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "11pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "      Page: How well the screen works",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "4   Which households does the screen miss, and where?",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "11pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "      Page: Who the screen misses",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "5   What should we ask about to spot risk early?",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "11pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "      Page: What drives risk",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "6   How many households would a given threshold refer?",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "11pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "      Page: How well the screen works",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "6pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Each page is titled with the question it answers. Nothing on these pages is here only because the data allowed it.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "9pt",
+                      "color": "#D2D0CE"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#605E5C'"
+                    }
+                  }
+                }
+              }
+            },
+            "radius": {
+              "expr": {
+                "Literal": {
+                  "Value": "6D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#3B3A39'"
+                    }
+                  }
+                }
+              }
+            },
+            "transparency": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

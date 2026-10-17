@@ -1,0 +1,170 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "8ec75c036286625f7d8d",
+  "position": {
+    "x": 648,
+    "y": 466,
+    "z": 440,
+    "height": 224,
+    "width": 616,
+    "tabOrder": 440
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "What it means",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "12pt",
+                      "color": "#FFFFFF",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "6pt",
+                      "color": "#979593"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "The screen is weakest exactly where food insecurity is least expected: households with income above R11,500 (39.2% recall) and households receiving no grants (61.7%). It is strongest for households of seven or more (95.9%).",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "10pt",
+                      "color": "#D2D0CE"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "A wide confidence interval means the group is too small to judge - Farms has only 197 test households, so its 75.8% could sit anywhere between 63.8% and 84.8%.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "10pt",
+                      "color": "#D2D0CE"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Officials should not treat a lower-risk score as clearance for a higher-income or no-grant household. These two groups need a second route into assessment that does not depend on the screen.",
+                    "textStyle": {
+                      "fontFamily": "IBM Plex Sans, Segoe UI, system-ui, sans-serif",
+                      "fontSize": "10pt",
+                      "color": "#FCB714",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ],
+                "horizontalTextAlignment": "left"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#605E5C'"
+                    }
+                  }
+                }
+              }
+            },
+            "radius": {
+              "expr": {
+                "Literal": {
+                  "Value": "6D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "Literal": {
+                      "Value": "'#3B3A39'"
+                    }
+                  }
+                }
+              }
+            },
+            "transparency": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

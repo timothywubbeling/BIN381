@@ -1,0 +1,43 @@
+// M1 metrics restored - Data Inventory (expect 10 / 7 / 3 / 146,626 / 20,940 / 46 / 229)
+EVALUATE ROW(
+  "Datasets provided", [Datasets provided],
+  "Datasets selected", [Datasets selected],
+  "Datasets set aside", [Datasets set aside],
+  "Rows in selection", [Rows in selection],
+  "Households after de-duplication", [Households after de-duplication],
+  "Duplicate rows removed", [Duplicate rows removed],
+  "Columns profiled", [Columns profiled],
+  "Households modelled", [Households in sample])
+--------
+// M1 metrics restored - Data Quality (expect 115 / 16 / 7 / 113)
+EVALUATE ROW(
+  "Issues logged", [Issues logged], "Issue types", [Issue types],
+  "Datasets repaired", [Datasets repaired], "Columns repaired", [Columns repaired])
+--------
+// grain donut
+EVALUATE SUMMARIZECOLUMNS(powerbi_dataset_inventory[Grain],
+  "Datasets", [Datasets provided], "Rows", SUM(powerbi_dataset_inventory[Rows]))
+--------
+// inventory table as page 7 builds it
+EVALUATE
+SUMMARIZECOLUMNS(powerbi_dataset_inventory[Dataset], powerbi_dataset_inventory[Domain],
+  powerbi_dataset_inventory[Grain], powerbi_dataset_inventory[Selected],
+  "Rows", SUM(powerbi_dataset_inventory[Rows]),
+  "Households", SUM(powerbi_dataset_inventory[Households]),
+  "Dupes", SUM(powerbi_dataset_inventory[DuplicateRows]))
+ORDER BY powerbi_dataset_inventory[Dataset]
+--------
+// quality issues by type, as page 8 builds it
+EVALUATE
+TOPN(6, SUMMARIZECOLUMNS(powerbi_data_quality[Problem], "Issues", [Issues logged]),
+  [Issues], DESC)
+--------
+// quality issues by dataset
+EVALUATE SUMMARIZECOLUMNS(powerbi_data_quality[Domain], "Issues", [Issues logged])
+--------
+// nothing on the earlier pages moved
+EVALUATE ROW(
+  "Households", [Households in sample], "AtRisk w", [At-risk share (weighted)],
+  "Recall@0.24", [Recall at threshold], "Precision@0.24", [Precision at threshold],
+  "Referred@0.24", [Referred at threshold], "Status", [Reconciliation status],
+  "Outside tolerance", [Groups outside tolerance])

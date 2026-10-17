@@ -1,0 +1,140 @@
+// 1 - row counts per table
+EVALUATE ROW(
+    "households", COUNTROWS(powerbi_households),
+    "model_summary", COUNTROWS(powerbi_model_summary),
+    "subgroups", COUNTROWS(powerbi_subgroup_performance),
+    "importance", COUNTROWS(powerbi_permutation_importance),
+    "odds", COUNTROWS(powerbi_odds_ratios),
+    "reconciliation", COUNTROWS(powerbi_reconciliation),
+    "threshold_curve", COUNTROWS(powerbi_threshold_curve),
+    "threshold_param", COUNTROWS('Threshold')
+)
+--------
+// 2 - headline measures (expect 20925 / 28.3% / 18.6% / 59.2% / 6279)
+EVALUATE ROW(
+    "Households in sample", [Households in sample],
+    "At-risk share (weighted)", [At-risk share (weighted)],
+    "At-risk share (unweighted)", [At-risk share (unweighted)],
+    "Severe share (weighted)", [Severe share (weighted)],
+    "Referred share (all)", [Referred share],
+    "Test households", [Test households],
+    "At-risk households (test)", [At-risk households (test)],
+    "Estimated households at risk", [Estimated households at risk]
+)
+--------
+// 3 - what-if at the default 0.24 (expect 80.7% / 41.9% / 58.9% / 589)
+EVALUATE ROW(
+    "Threshold Value", [Threshold Value],
+    "Recall at threshold", [Recall at threshold],
+    "Precision at threshold", [Precision at threshold],
+    "Referred at threshold", [Referred at threshold],
+    "Households referred per 1000", [Households referred (per 1,000)]
+)
+--------
+// 4 - deployed metrics from the model summary table
+EVALUATE ROW(
+    "Deployed threshold", [Deployed threshold],
+    "Deployed recall", [Deployed recall],
+    "Deployed precision", [Deployed precision],
+    "Deployed share referred", [Deployed share referred],
+    "Deployed ROC-AUC", [Deployed ROC-AUC],
+    "Deployed PR-AUC", [Deployed PR-AUC],
+    "Deployed Brier score", [Deployed Brier score],
+    "Deployed test households", [Deployed test households]
+)
+--------
+// 5 - what-if agrees with the deployed cards at 0.24
+EVALUATE ROW(
+    "recall gap", [Recall at threshold] - [Deployed recall],
+    "precision gap", [Precision at threshold] - [Deployed precision],
+    "referred gap", [Referred at threshold] - [Deployed share referred]
+)
+--------
+// 6 - PERSON C RECONCILIATION: dashboard vs R, province by province
+EVALUATE
+SUMMARIZECOLUMNS(
+    powerbi_households[Province],
+    "Households", [Households in sample],
+    "Dashboard at-risk", [At-risk share (weighted)],
+    "R at-risk", [R at-risk share (weighted)],
+    "Diff pts", [Difference at-risk (points)],
+    "Dashboard referred", [Referred share],
+    "R referred", [R referred share],
+    "Diff pts ref", [Difference referred (points)],
+    "Status", [Reconciliation status]
+)
+--------
+// 7 - national reconciliation
+EVALUATE ROW(
+    "Dashboard at-risk", [At-risk share (weighted)],
+    "R at-risk", [R at-risk share (weighted)],
+    "Diff", [Difference at-risk (points)],
+    "Dashboard severe", [Severe share (weighted)],
+    "R severe", [R severe share (weighted)],
+    "Dashboard referred", [Referred share],
+    "R referred", [R referred share],
+    "Diff ref", [Difference referred (points)],
+    "Status", [Reconciliation status]
+)
+--------
+// 8 - calculated columns: Score band ordering
+EVALUATE
+TOPN(6, SUMMARIZE(powerbi_households, powerbi_households[Score band],
+     powerbi_households[Score band sort], "n", COUNTROWS(powerbi_households)),
+     [Score band sort], ASC)
+ORDER BY [Score band sort]
+--------
+// 9 - calculated columns: Income vs a year ago ordering
+EVALUATE
+SUMMARIZE(powerbi_households, powerbi_households[Income vs a year ago],
+          powerbi_households[Income vs a year ago sort], "n", COUNTROWS(powerbi_households))
+ORDER BY [Income vs a year ago sort]
+--------
+// 10 - label columns on importance and odds ratios
+EVALUATE
+SELECTCOLUMNS(powerbi_permutation_importance, "Rank", [Rank], "Driver", [Driver],
+              "AUC drop", [AUC_drop])
+ORDER BY [Rank]
+--------
+// 11 - odds ratio labels and direction
+EVALUATE
+SELECTCOLUMNS(powerbi_odds_ratios, "Factor", [Factor], "OR", [OddsRatio],
+              "Direction", [Direction])
+ORDER BY [OR] DESC
+--------
+// 12 - subgroup tolerance measures (expect 80.7% centre, band 70.7-90.7)
+EVALUATE ROW(
+    "Overall recall", [Overall recall (reference)],
+    "Band low", [Tolerance band low],
+    "Band high", [Tolerance band high],
+    "Groups outside tolerance", [Groups outside tolerance],
+    "Subgroup rows", COUNTROWS(powerbi_subgroup_performance)
+)
+--------
+// 13 - the groups flagged outside tolerance
+EVALUATE
+SELECTCOLUMNS(FILTER(powerbi_subgroup_performance, [within_tolerance] = "No"),
+    "variable", [variable], "group", [group], "recall", [recall],
+    "households", [households])
+ORDER BY [recall]
+--------
+// 14 - threshold curve spot checks against Rudi's documented table
+EVALUATE
+SELECTCOLUMNS(
+    FILTER(powerbi_threshold_curve,
+           [Threshold] IN {0.14, 0.20, 0.22, 0.24, 0.26, 0.30, 0.35, 0.40, 0.50}),
+    "Threshold", [Threshold], "Recall", [Recall], "Precision", [Precision],
+    "Share referred", [ReferredShare], "IsDeployed", [IsDeployed])
+ORDER BY [Threshold]
+--------
+// 15 - settlement and income band cuts used on pages 2 and 3
+EVALUATE
+SUMMARIZECOLUMNS(powerbi_households[Settlement], "Households", [Households in sample],
+    "At risk", [At-risk share (weighted)], "Severe", [Severe share (weighted)],
+    "Referred", [Referred share])
+--------
+// 16 - income band cut
+EVALUATE
+SUMMARIZECOLUMNS(powerbi_households[IncomeBand], "Households", [Households in sample],
+    "At risk", [At-risk share (weighted)], "Severe", [Severe share (weighted)],
+    "Referred", [Referred share])

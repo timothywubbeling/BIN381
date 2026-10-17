@@ -1,0 +1,1826 @@
+{
+  "name": "SemanticModel",
+  "compatibilityLevel": 1600,
+  "model": {
+    "culture": "en-US",
+    "dataAccessOptions": {
+      "legacyRedirects": true,
+      "returnErrorValuesAsNull": true
+    },
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "discourageImplicitMeasures": false,
+    "sourceQueryCulture": "en-US",
+    "tables": [
+      {
+        "name": "powerbi_households",
+        "description": "One row per modelled household (20,925). HouseholdKey is a row number, not the survey HouseholdID - no household is identifiable from this table.",
+        "lineageTag": "88469170-c642-e08b-1c3b-0e1018487bba",
+        "columns": [
+          {
+            "name": "HouseholdKey",
+            "dataType": "int64",
+            "sourceColumn": "HouseholdKey",
+            "summarizeBy": "none",
+            "lineageTag": "e6dd9a5e-8eb2-542f-e8e6-8be92f80f40e",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "isHidden": true
+          },
+          {
+            "name": "Split",
+            "dataType": "string",
+            "sourceColumn": "Split",
+            "summarizeBy": "none",
+            "lineageTag": "d4fb4fa8-7deb-2f2a-3435-67473a9616a4",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Province",
+            "dataType": "string",
+            "sourceColumn": "Province",
+            "summarizeBy": "none",
+            "lineageTag": "e15d906a-9d64-82ba-f1d1-7e6e3a8e157e",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "ProvinceCode",
+            "dataType": "int64",
+            "sourceColumn": "ProvinceCode",
+            "summarizeBy": "none",
+            "lineageTag": "c2076128-5018-69ef-b676-981e057608d3",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "isHidden": true
+          },
+          {
+            "name": "Settlement",
+            "dataType": "string",
+            "sourceColumn": "Settlement",
+            "summarizeBy": "none",
+            "lineageTag": "bb4c0f2a-18ea-1198-003a-25578fd2896c",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "HouseholdSize",
+            "dataType": "int64",
+            "sourceColumn": "HouseholdSize",
+            "summarizeBy": "sum",
+            "lineageTag": "5d99cfed-970b-6931-c4e2-a3b7ad7b385e",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0"
+          },
+          {
+            "name": "SizeBand",
+            "dataType": "string",
+            "sourceColumn": "SizeBand",
+            "summarizeBy": "none",
+            "lineageTag": "89df0cc8-63bc-08c1-3baa-ea419382da4c",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "MonthlyIncome",
+            "dataType": "double",
+            "sourceColumn": "MonthlyIncome",
+            "summarizeBy": "sum",
+            "lineageTag": "1fc9141e-cb0d-96cd-3f0b-835631ec3473",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "IncomeBand",
+            "dataType": "string",
+            "sourceColumn": "IncomeBand",
+            "summarizeBy": "none",
+            "lineageTag": "82de90b6-fd2a-c336-5488-450831926762",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "IncomeChange",
+            "dataType": "string",
+            "sourceColumn": "IncomeChange",
+            "summarizeBy": "none",
+            "lineageTag": "24d73601-d0dc-8c1d-4db3-aa0ee29d5ac6",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "isHidden": true
+          },
+          {
+            "name": "Electricity",
+            "dataType": "string",
+            "sourceColumn": "Electricity",
+            "summarizeBy": "none",
+            "lineageTag": "17c5b4a5-2088-2379-9217-ff1d3b121b26",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "GrantRecipients",
+            "dataType": "int64",
+            "sourceColumn": "GrantRecipients",
+            "summarizeBy": "sum",
+            "lineageTag": "d501ba2b-85d6-1df8-58d5-1ff0051fefa6",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0"
+          },
+          {
+            "name": "GrantBand",
+            "dataType": "string",
+            "sourceColumn": "GrantBand",
+            "summarizeBy": "none",
+            "lineageTag": "65f55ab1-f543-d43b-b10c-61acc02261cc",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "ToiletCode",
+            "dataType": "int64",
+            "sourceColumn": "ToiletCode",
+            "summarizeBy": "none",
+            "lineageTag": "153bd9d7-7ed9-423e-c88b-c697cef1f539",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "isHidden": true
+          },
+          {
+            "name": "ToiletType",
+            "dataType": "string",
+            "sourceColumn": "ToiletType",
+            "summarizeBy": "none",
+            "lineageTag": "dedefffd-e1a4-c5cd-1034-9e169c00c116",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "FI_Score",
+            "dataType": "int64",
+            "sourceColumn": "FI_Score",
+            "summarizeBy": "none",
+            "lineageTag": "7eaa0072-16de-0125-b996-f49cd6a15c5f",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0"
+          },
+          {
+            "name": "Tier",
+            "dataType": "string",
+            "sourceColumn": "Tier",
+            "summarizeBy": "none",
+            "lineageTag": "745ccb8f-6b04-3404-6c70-103b56718056",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "AtRisk",
+            "dataType": "int64",
+            "sourceColumn": "AtRisk",
+            "summarizeBy": "sum",
+            "lineageTag": "99c63257-25ac-370b-70ca-3d6ea7b7d0e2",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0"
+          },
+          {
+            "name": "Severe",
+            "dataType": "int64",
+            "sourceColumn": "Severe",
+            "summarizeBy": "sum",
+            "lineageTag": "9e6c041b-c3ff-2ca4-eff4-600db6a98de8",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0"
+          },
+          {
+            "name": "ModelProbability",
+            "dataType": "double",
+            "sourceColumn": "ModelProbability",
+            "summarizeBy": "none",
+            "lineageTag": "8acd162d-05dc-7f71-e64b-40c73bdc7b22",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.000"
+          },
+          {
+            "name": "ReferForReview",
+            "dataType": "int64",
+            "sourceColumn": "ReferForReview",
+            "summarizeBy": "sum",
+            "lineageTag": "84616894-e691-a244-63b3-e7fc15492684",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0"
+          },
+          {
+            "name": "HouseholdWeight",
+            "dataType": "double",
+            "sourceColumn": "HouseholdWeight",
+            "summarizeBy": "sum",
+            "lineageTag": "84a5de3b-0862-48e2-4f0e-fce21121054b",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0.00"
+          },
+          {
+            "name": "Outcome",
+            "type": "calculated",
+            "expression": "IF(powerbi_households[AtRisk] = 1, \"At risk\", \"Not at risk\")",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "36b33ef9-56d2-c092-1e22-e618987d7771",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string"
+          },
+          {
+            "name": "Referral",
+            "type": "calculated",
+            "expression": "IF(powerbi_households[ReferForReview] = 1, \"Referred for follow-up\", \"Not referred\")",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "59282260-a4b9-b1a2-6e50-16189fc66c66",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string"
+          },
+          {
+            "name": "Score band sort",
+            "type": "calculated",
+            "expression": "FLOOR(powerbi_households[ModelProbability] * 20, 1)",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "c69db993-7849-9dcf-7fa1-7bf525cf81ce",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Score band",
+            "type": "calculated",
+            "expression": "VAR b = FLOOR(powerbi_households[ModelProbability] * 20, 1) / 20 RETURN FORMAT(b, \"0.00\") & \" to \" & FORMAT(b + 0.05, \"0.00\")",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "39e5a80b-f0d4-cf7b-a9be-129e3eb2c0f0",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "sortByColumn": "Score band sort"
+          },
+          {
+            "name": "Income vs a year ago sort",
+            "type": "calculated",
+            "expression": "IFERROR(VALUE(LEFT(powerbi_households[IncomeChange], 1)), 9)",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "e11afd46-521d-c4d9-9ce4-ece40479159b",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Income vs a year ago",
+            "type": "calculated",
+            "expression": "SWITCH(LEFT(powerbi_households[IncomeChange], 1), \"1\", \"Much higher\", \"2\", \"A little higher\", \"3\", \"About the same\", \"4\", \"A little lower\", \"5\", \"Much lower\", \"Not stated\")",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "c595b1c5-fca3-4d3c-ec32-9dfae5b9e111",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "sortByColumn": "Income vs a year ago sort"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_households",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_households.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"HouseholdKey\", Int64.Type}, {\"Split\", type text}, {\"Province\", type text}, {\"ProvinceCode\", Int64.Type}, {\"Settlement\", type text}, {\"HouseholdSize\", Int64.Type}, {\"SizeBand\", type text}, {\"MonthlyIncome\", type number}, {\"IncomeBand\", type text}, {\"IncomeChange\", type text}, {\"Electricity\", type text}, {\"GrantRecipients\", Int64.Type}, {\"GrantBand\", type text}, {\"ToiletCode\", Int64.Type}, {\"ToiletType\", type text}, {\"FI_Score\", Int64.Type}, {\"Tier\", type text}, {\"AtRisk\", Int64.Type}, {\"Severe\", Int64.Type}, {\"ModelProbability\", type number}, {\"ReferForReview\", Int64.Type}, {\"HouseholdWeight\", type number}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Households in sample",
+            "expression": "COUNTROWS(powerbi_households)",
+            "lineageTag": "6e80a1cc-bfde-b168-1e6e-8ec553d0cae9",
+            "formatString": "#,0",
+            "description": "Households in the current selection.",
+            "displayFolder": "1 Counts"
+          },
+          {
+            "name": "Households",
+            "expression": "COUNTROWS(powerbi_households)",
+            "lineageTag": "fe4285ce-0cbc-df36-2cc5-fb392870bd45",
+            "formatString": "#,0",
+            "displayFolder": "1 Counts"
+          },
+          {
+            "name": "Test households",
+            "expression": "CALCULATE(COUNTROWS(powerbi_households), powerbi_households[Split] = \"Test\")",
+            "lineageTag": "95022d6d-edf0-2afe-9d0d-91342ca1fc2e",
+            "formatString": "#,0",
+            "displayFolder": "1 Counts"
+          },
+          {
+            "name": "Estimated households at risk",
+            "expression": "SUMX(powerbi_households, powerbi_households[AtRisk] * powerbi_households[HouseholdWeight])",
+            "lineageTag": "14ec6fc6-4dd5-ea9f-c5d2-b33d4d1db3f0",
+            "formatString": "#,0",
+            "description": "Survey-weighted population estimate.",
+            "displayFolder": "1 Counts"
+          },
+          {
+            "name": "At-risk share (weighted)",
+            "expression": "DIVIDE(SUMX(powerbi_households, powerbi_households[AtRisk] * powerbi_households[HouseholdWeight]), SUM(powerbi_households[HouseholdWeight]))",
+            "lineageTag": "410310dc-e9ff-13ba-5a12-f9279651965d",
+            "formatString": "0.0%",
+            "description": "Share of households at risk, weighted by HouseholdWeight.",
+            "displayFolder": "2 Prevalence"
+          },
+          {
+            "name": "At-risk share (unweighted)",
+            "expression": "DIVIDE(SUM(powerbi_households[AtRisk]), COUNTROWS(powerbi_households))",
+            "lineageTag": "e402e1ca-f845-33dc-b77c-a3c08fc5a874",
+            "formatString": "0.0%",
+            "displayFolder": "2 Prevalence"
+          },
+          {
+            "name": "Severe share (weighted)",
+            "expression": "DIVIDE(SUMX(powerbi_households, powerbi_households[Severe] * powerbi_households[HouseholdWeight]), SUM(powerbi_households[HouseholdWeight]))",
+            "lineageTag": "88b3fad0-5311-6f29-62c0-9902b6e40c27",
+            "formatString": "0.0%",
+            "displayFolder": "2 Prevalence"
+          },
+          {
+            "name": "Referred share",
+            "expression": "DIVIDE(SUM(powerbi_households[ReferForReview]), COUNTROWS(powerbi_households))",
+            "lineageTag": "1f72bbe8-ed81-707c-d5b5-141fdbf76831",
+            "formatString": "0.0%",
+            "description": "Share referred across all 20,925 households (59.2%) - not the test-set figure.",
+            "displayFolder": "2 Prevalence"
+          },
+          {
+            "name": "At-risk households (test)",
+            "expression": "CALCULATE(SUM(powerbi_households[AtRisk]), powerbi_households[Split] = \"Test\")",
+            "lineageTag": "6b3ad0b0-cdca-8e03-fc54-def20dc2b903",
+            "formatString": "#,0",
+            "displayFolder": "3 What-if"
+          },
+          {
+            "name": "Recall at threshold",
+            "expression": "VAR T = [Threshold Value] RETURN DIVIDE(CALCULATE(SUM(powerbi_households[AtRisk]), powerbi_households[Split] = \"Test\", FILTER(ALL(powerbi_households[ModelProbability]), powerbi_households[ModelProbability] >= T)), [At-risk households (test)])",
+            "lineageTag": "55ce9473-faeb-8de7-d492-10e12284e203",
+            "formatString": "0.0%",
+            "description": "At-risk test households referred at the selected threshold.",
+            "displayFolder": "3 What-if"
+          },
+          {
+            "name": "Referred at threshold",
+            "expression": "VAR T = [Threshold Value] RETURN DIVIDE(CALCULATE(COUNTROWS(powerbi_households), powerbi_households[Split] = \"Test\", FILTER(ALL(powerbi_households[ModelProbability]), powerbi_households[ModelProbability] >= T)), [Test households])",
+            "lineageTag": "5114b939-aa10-7f17-1b09-3eacc85ae3de",
+            "formatString": "0.0%",
+            "displayFolder": "3 What-if"
+          },
+          {
+            "name": "Precision at threshold",
+            "expression": "VAR T = [Threshold Value] RETURN DIVIDE(CALCULATE(SUM(powerbi_households[AtRisk]), powerbi_households[Split] = \"Test\", FILTER(ALL(powerbi_households[ModelProbability]), powerbi_households[ModelProbability] >= T)), CALCULATE(COUNTROWS(powerbi_households), powerbi_households[Split] = \"Test\", FILTER(ALL(powerbi_households[ModelProbability]), powerbi_households[ModelProbability] >= T)))",
+            "lineageTag": "352e6a9b-c876-9568-672b-27850571af92",
+            "formatString": "0.0%",
+            "displayFolder": "3 What-if"
+          },
+          {
+            "name": "Households referred (per 1,000)",
+            "expression": "ROUND([Referred at threshold] * 1000, 0)",
+            "lineageTag": "5e9f390f-66a6-bfd2-76af-fc1659f1eca4",
+            "formatString": "#,0",
+            "displayFolder": "3 What-if"
+          },
+          {
+            "name": "R at-risk share (weighted)",
+            "expression": "VAR p = SELECTEDVALUE(powerbi_households[Province])\nVAR v = IF(ISBLANK(p),\n    LOOKUPVALUE(powerbi_reconciliation[AtRiskPct_weighted], powerbi_reconciliation[Breakdown], \"All\", powerbi_reconciliation[Group], \"All households\"),\n    LOOKUPVALUE(powerbi_reconciliation[AtRiskPct_weighted], powerbi_reconciliation[Breakdown], \"Province\", powerbi_reconciliation[Group], p))\nRETURN DIVIDE(v, 100)",
+            "lineageTag": "3bf92561-d51e-dd91-d6b5-3ec6787bc5c6",
+            "formatString": "0.0%",
+            "description": "The same figure as computed in R, looked up from powerbi_reconciliation.csv.",
+            "displayFolder": "4 Reconciliation"
+          },
+          {
+            "name": "R severe share (weighted)",
+            "expression": "VAR p = SELECTEDVALUE(powerbi_households[Province])\nVAR v = IF(ISBLANK(p),\n    LOOKUPVALUE(powerbi_reconciliation[SeverePct_weighted], powerbi_reconciliation[Breakdown], \"All\", powerbi_reconciliation[Group], \"All households\"),\n    LOOKUPVALUE(powerbi_reconciliation[SeverePct_weighted], powerbi_reconciliation[Breakdown], \"Province\", powerbi_reconciliation[Group], p))\nRETURN DIVIDE(v, 100)",
+            "lineageTag": "4764f2b1-c18a-48f2-07e6-73cfab66d265",
+            "formatString": "0.0%",
+            "displayFolder": "4 Reconciliation"
+          },
+          {
+            "name": "R referred share",
+            "expression": "VAR p = SELECTEDVALUE(powerbi_households[Province])\nVAR v = IF(ISBLANK(p),\n    LOOKUPVALUE(powerbi_reconciliation[ReferredPct], powerbi_reconciliation[Breakdown], \"All\", powerbi_reconciliation[Group], \"All households\"),\n    LOOKUPVALUE(powerbi_reconciliation[ReferredPct], powerbi_reconciliation[Breakdown], \"Province\", powerbi_reconciliation[Group], p))\nRETURN DIVIDE(v, 100)",
+            "lineageTag": "2ef1d681-ac3a-a42f-6f35-58e6400d484c",
+            "formatString": "0.0%",
+            "displayFolder": "4 Reconciliation"
+          },
+          {
+            "name": "Difference at-risk (points)",
+            "expression": "ROUND(([At-risk share (weighted)] - [R at-risk share (weighted)]) * 100, 1)",
+            "lineageTag": "88b9669c-5c2d-21d8-a701-c0729bb0e357",
+            "formatString": "0.0",
+            "description": "Dashboard minus R, in percentage points. Must read 0.0 for every province.",
+            "displayFolder": "4 Reconciliation"
+          },
+          {
+            "name": "Difference referred (points)",
+            "expression": "ROUND(([Referred share] - [R referred share]) * 100, 1)",
+            "lineageTag": "cfb6c2a3-a953-4df6-eee7-443620059239",
+            "formatString": "0.0",
+            "displayFolder": "4 Reconciliation"
+          },
+          {
+            "name": "Reconciliation status",
+            "expression": "VAR d = ABS([Difference at-risk (points)]) + ABS([Difference referred (points)])\nRETURN IF(d <= 0.1, \"Reconciled\", \"CHECK\")",
+            "lineageTag": "52ae36dc-f910-cf9f-d31b-0300edcc50af",
+            "description": "Reconciled when the dashboard and R agree to within 0.1 of a percentage point.",
+            "displayFolder": "4 Reconciliation"
+          }
+        ]
+      },
+      {
+        "name": "powerbi_model_summary",
+        "description": "Headline test-set metrics for the deployed screen, as written by the R evaluation notebook.",
+        "lineageTag": "44df9045-54f4-b3c7-bac8-01651933a11a",
+        "columns": [
+          {
+            "name": "Metric",
+            "dataType": "string",
+            "sourceColumn": "Metric",
+            "summarizeBy": "none",
+            "lineageTag": "4558548f-acef-bfe4-f326-0275bd31d3dd",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Value",
+            "dataType": "double",
+            "sourceColumn": "Value",
+            "summarizeBy": "sum",
+            "lineageTag": "35d7b890-8d0e-f380-bc46-1537fbdd695d",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.000"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_model_summary",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_model_summary.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"Metric\", type text}, {\"Value\", type number}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Deployed recall",
+            "expression": "CALCULATE(SUM(powerbi_model_summary[Value]), powerbi_model_summary[Metric] = \"Recall (at-risk households found)\")",
+            "lineageTag": "e2ff42d4-cea5-bda2-0a8f-c69d5f12fcdb",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Deployed precision",
+            "expression": "CALCULATE(SUM(powerbi_model_summary[Value]), powerbi_model_summary[Metric] = \"Precision (referrals at risk)\")",
+            "lineageTag": "5a8b9ed1-f33e-3e22-a9e0-9d74ab194c3d",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Deployed share referred",
+            "expression": "CALCULATE(SUM(powerbi_model_summary[Value]), powerbi_model_summary[Metric] = \"Share of households referred\")",
+            "lineageTag": "0840bf94-7afc-7199-621f-a2ea57b6361f",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Deployed ROC-AUC",
+            "expression": "CALCULATE(SUM(powerbi_model_summary[Value]), powerbi_model_summary[Metric] = \"ROC-AUC\")",
+            "lineageTag": "2ed5db6b-7a33-ae6a-e64e-95524e8a0f54",
+            "formatString": "0.000"
+          },
+          {
+            "name": "Deployed PR-AUC",
+            "expression": "CALCULATE(SUM(powerbi_model_summary[Value]), powerbi_model_summary[Metric] = \"PR-AUC\")",
+            "lineageTag": "3d0b1906-6964-14c6-7278-5a83d5dada78",
+            "formatString": "0.000"
+          },
+          {
+            "name": "Deployed Brier score",
+            "expression": "CALCULATE(SUM(powerbi_model_summary[Value]), powerbi_model_summary[Metric] = \"Brier score\")",
+            "lineageTag": "4578a9d2-34ac-bc15-5eda-e7a7dbfac844",
+            "formatString": "0.000"
+          },
+          {
+            "name": "Deployed test households",
+            "expression": "CALCULATE(SUM(powerbi_model_summary[Value]), powerbi_model_summary[Metric] = \"Test households\")",
+            "lineageTag": "25ae727b-335c-bb4b-f59e-91f32079c876",
+            "formatString": "#,0"
+          },
+          {
+            "name": "Deployed threshold",
+            "expression": "CALCULATE(SUM(powerbi_model_summary[Value]), powerbi_model_summary[Metric] = \"Threshold\")",
+            "lineageTag": "588ec013-fa6a-ae65-d391-d030f5175aa2",
+            "formatString": "0.00"
+          }
+        ]
+      },
+      {
+        "name": "powerbi_subgroup_performance",
+        "description": "Test-set recall and precision by subgroup, with Wilson 95% intervals.",
+        "lineageTag": "f0fa421e-c6d4-e6e5-9ac8-37d09981a4aa",
+        "columns": [
+          {
+            "name": "variable",
+            "dataType": "string",
+            "sourceColumn": "variable",
+            "summarizeBy": "none",
+            "lineageTag": "1cf0adc7-51bc-5fa5-4b66-31126d308438",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "group",
+            "dataType": "string",
+            "sourceColumn": "group",
+            "summarizeBy": "none",
+            "lineageTag": "26a5c884-6655-77e2-dde1-66e1606ac14b",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "households",
+            "dataType": "int64",
+            "sourceColumn": "households",
+            "summarizeBy": "sum",
+            "lineageTag": "c8bad058-a81f-66dd-3f63-7cbc17ff53ee",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "at_risk",
+            "dataType": "int64",
+            "sourceColumn": "at_risk",
+            "summarizeBy": "sum",
+            "lineageTag": "16d20b9c-9750-9677-4bd3-19632b5b9663",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "recall",
+            "dataType": "double",
+            "sourceColumn": "recall",
+            "summarizeBy": "sum",
+            "lineageTag": "a94bb071-89d1-eb06-35ce-68b2b5d85cb7",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "recall_95_low",
+            "dataType": "double",
+            "sourceColumn": "recall_95_low",
+            "summarizeBy": "sum",
+            "lineageTag": "859d73c1-f2b3-5e31-90e3-44fc4bcde8c9",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "recall_95_high",
+            "dataType": "double",
+            "sourceColumn": "recall_95_high",
+            "summarizeBy": "sum",
+            "lineageTag": "bf39fbcb-8db3-ff1e-6016-703d779b625c",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "false_negative_rate",
+            "dataType": "double",
+            "sourceColumn": "false_negative_rate",
+            "summarizeBy": "sum",
+            "lineageTag": "05d2f148-848c-c03a-acca-bcc2f1015a46",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "precision",
+            "dataType": "double",
+            "sourceColumn": "precision",
+            "summarizeBy": "sum",
+            "lineageTag": "67908d24-87f4-aaa0-60fe-5594012b7cb3",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "pct_flagged",
+            "dataType": "double",
+            "sourceColumn": "pct_flagged",
+            "summarizeBy": "sum",
+            "lineageTag": "d10c93ca-fffb-ae58-494c-cf3286c5d30f",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "gap_vs_overall",
+            "dataType": "double",
+            "sourceColumn": "gap_vs_overall",
+            "summarizeBy": "sum",
+            "lineageTag": "0d63efd3-87f8-dfac-bde2-7f3b973b37f6",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0"
+          },
+          {
+            "name": "within_10_points",
+            "dataType": "string",
+            "sourceColumn": "within_10_points",
+            "summarizeBy": "none",
+            "lineageTag": "949e3b2e-ab6a-b576-f880-4d998a1ecd68",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "isHidden": true
+          },
+          {
+            "name": "within_tolerance",
+            "dataType": "string",
+            "sourceColumn": "within_tolerance",
+            "summarizeBy": "none",
+            "lineageTag": "a592eccd-f854-99d2-d84f-8d817af1bfd1",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "CI width",
+            "type": "calculated",
+            "expression": "powerbi_subgroup_performance[recall_95_high] - powerbi_subgroup_performance[recall_95_low]",
+            "isDataTypeInferred": true,
+            "summarizeBy": "sum",
+            "lineageTag": "6693622b-a2a5-33d1-0ec1-308858874daf",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_subgroup_performance",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_subgroup_performance.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"variable\", type text}, {\"group\", type text}, {\"households\", Int64.Type}, {\"at_risk\", Int64.Type}, {\"recall\", type number}, {\"recall_95_low\", type number}, {\"recall_95_high\", type number}, {\"false_negative_rate\", type number}, {\"precision\", type number}, {\"pct_flagged\", type number}, {\"gap_vs_overall\", type number}, {\"within_10_points\", type text}, {\"within_tolerance\", type text}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Overall recall (reference)",
+            "expression": "0.807191245440333",
+            "lineageTag": "1883f682-4a6d-1877-c6f4-444c24afc157",
+            "formatString": "0.0%",
+            "description": "Overall test-set recall, the centre of the 10-point tolerance band."
+          },
+          {
+            "name": "Tolerance band low",
+            "expression": "0.707191245440333",
+            "lineageTag": "84218e41-8a76-5b47-e3f7-e82bd495892b",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Tolerance band high",
+            "expression": "0.907191245440333",
+            "lineageTag": "6f1907ef-be3e-ad76-b3de-8abb73bd2714",
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Groups outside tolerance",
+            "expression": "COUNTROWS(FILTER(powerbi_subgroup_performance, powerbi_subgroup_performance[within_tolerance] = \"No\"))",
+            "lineageTag": "b643b97a-1d07-99ba-6a06-ca075b268607",
+            "formatString": "#,0"
+          }
+        ]
+      },
+      {
+        "name": "powerbi_permutation_importance",
+        "description": "Drop in test ROC-AUC when each predictor is randomly permuted.",
+        "lineageTag": "dfc1896a-8e36-840a-ecc3-8286343b32d5",
+        "columns": [
+          {
+            "name": "Predictor",
+            "dataType": "string",
+            "sourceColumn": "Predictor",
+            "summarizeBy": "none",
+            "lineageTag": "ae21a899-e944-0e4e-53ad-40ed05db5289",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "isHidden": true
+          },
+          {
+            "name": "AUC_drop",
+            "dataType": "double",
+            "sourceColumn": "AUC_drop",
+            "summarizeBy": "sum",
+            "lineageTag": "cee60bb0-fa1a-9580-fce3-8a71296576a8",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0000"
+          },
+          {
+            "name": "Rank",
+            "dataType": "int64",
+            "sourceColumn": "Rank",
+            "summarizeBy": "none",
+            "lineageTag": "51997b90-eda1-7d61-eba5-25f24f7f3785",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0"
+          },
+          {
+            "name": "Driver",
+            "type": "calculated",
+            "expression": "SWITCH(powerbi_permutation_importance[Predictor], \"ComparativeIncomeCode\", \"Income change vs a year ago\", \"Income_PerCapita\", \"Income per person\", \"SocialGrantRecipients\", \"Number of grant recipients\", \"Income_Log\", \"Household income\", \"ElectricityAccessCode\", \"Electricity access\", \"GeoTypeCode\", \"Settlement type\", \"MainToiletCode\", \"Toilet type\", \"HouseholdSize\", \"Household size\", powerbi_permutation_importance[Predictor])",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "fb311681-9355-c8da-104a-012c90ecfd4c",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "sortByColumn": "Rank"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_permutation_importance",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_permutation_importance.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"Predictor\", type text}, {\"AUC_drop\", type number}, {\"Rank\", Int64.Type}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "powerbi_odds_ratios",
+        "description": "Adjusted odds ratios from the final lasso logistic model, with 95% intervals.",
+        "lineageTag": "c2a74f77-c51e-b80b-7161-e063c167962e",
+        "columns": [
+          {
+            "name": "Term",
+            "dataType": "string",
+            "sourceColumn": "Term",
+            "summarizeBy": "none",
+            "lineageTag": "eb343eb9-9450-ea83-3d02-fbcc9e10bf06",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "isHidden": true
+          },
+          {
+            "name": "OddsRatio",
+            "dataType": "double",
+            "sourceColumn": "OddsRatio",
+            "summarizeBy": "sum",
+            "lineageTag": "cded5273-5d6f-9964-e7cb-0c9ef4eb379c",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.000"
+          },
+          {
+            "name": "CI_low",
+            "dataType": "double",
+            "sourceColumn": "CI_low",
+            "summarizeBy": "sum",
+            "lineageTag": "9902c07a-5221-3cfa-deaf-6fc29f529823",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.000"
+          },
+          {
+            "name": "CI_high",
+            "dataType": "double",
+            "sourceColumn": "CI_high",
+            "summarizeBy": "sum",
+            "lineageTag": "a7a60457-9241-4c39-34a4-b850029b94b7",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.000"
+          },
+          {
+            "name": "p_value",
+            "dataType": "double",
+            "sourceColumn": "p_value",
+            "summarizeBy": "sum",
+            "lineageTag": "bba13572-5776-6aa1-c0b3-fc0c71a77011",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.00E+00"
+          },
+          {
+            "name": "Factor",
+            "type": "calculated",
+            "expression": "SWITCH(powerbi_odds_ratios[Term], \"ComparativeIncomeCode2\", \"Income a little higher than a year ago\", \"ComparativeIncomeCode3\", \"Income about the same\", \"ComparativeIncomeCode4\", \"Income a little lower\", \"ComparativeIncomeCode5\", \"Income much lower\", \"GeoTypeCodeTraditional_Tribal\", \"Traditional / tribal area\", \"GeoTypeCodeFarms\", \"Farm\", \"HouseholdSize\", \"Each extra household member\", \"Income_Log\", \"Higher household income\", \"ElectricityAccessCodeNo\", \"No electricity\", \"SocialGrantRecipients\", \"Each extra grant recipient\", \"MainToiletCode2\", \"Flush toilet, septic tank\", \"MainToiletCode5\", \"Pit latrine with ventilation pipe\", \"MainToiletCode6\", \"Pit latrine, no pipe, with slab\", \"MainToiletCode7\", \"Pit latrine, no pipe, no slab\", \"MainToiletCodeOther\", \"Other toilet type\", powerbi_odds_ratios[Term])",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "64fedb00-8dd0-522d-e91e-60180a929875",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string"
+          },
+          {
+            "name": "Direction",
+            "type": "calculated",
+            "expression": "IF(powerbi_odds_ratios[CI_low] > 1, \"Raises risk\", IF(powerbi_odds_ratios[CI_high] < 1, \"Lowers risk\", \"No clear effect\"))",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "13f3fe66-b46f-e8f0-d28c-a153c0415443",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_odds_ratios",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_odds_ratios.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"Term\", type text}, {\"OddsRatio\", type number}, {\"CI_low\", type number}, {\"CI_high\", type number}, {\"p_value\", type number}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "powerbi_reconciliation",
+        "description": "Benchmark percentages computed in R, by province, settlement type and income band. Person C's reconciliation source: every dashboard figure must match this file.",
+        "lineageTag": "79fff934-1231-f9cc-0f14-629aa6ded489",
+        "columns": [
+          {
+            "name": "Breakdown",
+            "dataType": "string",
+            "sourceColumn": "Breakdown",
+            "summarizeBy": "none",
+            "lineageTag": "ca365aa6-dded-0be4-e663-546bfed90c0c",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Group",
+            "dataType": "string",
+            "sourceColumn": "Group",
+            "summarizeBy": "none",
+            "lineageTag": "5c64137e-fc93-8720-b498-78567aa8c5d5",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Households",
+            "dataType": "int64",
+            "sourceColumn": "Households",
+            "summarizeBy": "sum",
+            "lineageTag": "22ff801f-fe22-dfa5-ef1d-75b53f0f3239",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "AtRiskPct_unweighted",
+            "dataType": "double",
+            "sourceColumn": "AtRiskPct_unweighted",
+            "summarizeBy": "sum",
+            "lineageTag": "1ea4936c-7eb9-6017-0434-80cf1afab169",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0"
+          },
+          {
+            "name": "AtRiskPct_weighted",
+            "dataType": "double",
+            "sourceColumn": "AtRiskPct_weighted",
+            "summarizeBy": "sum",
+            "lineageTag": "6f83863c-5043-c8ff-5510-b4e444edbc66",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0"
+          },
+          {
+            "name": "SeverePct_weighted",
+            "dataType": "double",
+            "sourceColumn": "SeverePct_weighted",
+            "summarizeBy": "sum",
+            "lineageTag": "869434da-e8a6-72b7-d6ed-077590f98c71",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0"
+          },
+          {
+            "name": "ReferredPct",
+            "dataType": "double",
+            "sourceColumn": "ReferredPct",
+            "summarizeBy": "sum",
+            "lineageTag": "5d71c9d2-ff04-9fb6-6f66-27578e5a3815",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_reconciliation",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_reconciliation.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"Breakdown\", type text}, {\"Group\", type text}, {\"Households\", Int64.Type}, {\"AtRiskPct_unweighted\", type number}, {\"AtRiskPct_weighted\", type number}, {\"SeverePct_weighted\", type number}, {\"ReferredPct\", type number}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "powerbi_threshold_curve",
+        "description": "Test-set metrics at every candidate referral threshold from 0.05 to 0.90. Built by scripts/make_threshold_curve.R from powerbi_households.csv.",
+        "lineageTag": "44163185-05a4-51bb-3ba8-b7032d6f96d6",
+        "columns": [
+          {
+            "name": "Threshold",
+            "dataType": "double",
+            "sourceColumn": "Threshold",
+            "summarizeBy": "none",
+            "lineageTag": "ab538bb1-ac8e-2f6b-3199-0f268c3d584f",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.00"
+          },
+          {
+            "name": "Referred",
+            "dataType": "int64",
+            "sourceColumn": "Referred",
+            "summarizeBy": "sum",
+            "lineageTag": "cca9e54a-a53a-3f00-475a-cec322bee7ea",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "ReferredShare",
+            "dataType": "double",
+            "sourceColumn": "ReferredShare",
+            "summarizeBy": "sum",
+            "lineageTag": "370d8d91-feee-ac9e-27dc-cbb253dda38d",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "TruePositives",
+            "dataType": "int64",
+            "sourceColumn": "TruePositives",
+            "summarizeBy": "sum",
+            "lineageTag": "9f4c899f-97be-fb95-9c1a-a99714fc708e",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "Recall",
+            "dataType": "double",
+            "sourceColumn": "Recall",
+            "summarizeBy": "sum",
+            "lineageTag": "913fab12-edd7-423e-7562-9d733de8ddb1",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "Precision",
+            "dataType": "double",
+            "sourceColumn": "Precision",
+            "summarizeBy": "sum",
+            "lineageTag": "8e670fa3-4475-1d28-8cff-98d47263474e",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "0.0%"
+          },
+          {
+            "name": "ReferredPer1000",
+            "dataType": "int64",
+            "sourceColumn": "ReferredPer1000",
+            "summarizeBy": "sum",
+            "lineageTag": "6751ecb2-e0ab-08c4-9b2d-595ae6d8aee8",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "MissedAtRisk",
+            "dataType": "int64",
+            "sourceColumn": "MissedAtRisk",
+            "summarizeBy": "sum",
+            "lineageTag": "76f4c703-a860-970b-aeed-ce252ebade76",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "IsDeployed",
+            "dataType": "string",
+            "sourceColumn": "IsDeployed",
+            "summarizeBy": "none",
+            "lineageTag": "df7b6888-43b5-c72f-5381-a0343ca82197",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_threshold_curve",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_threshold_curve.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"Threshold\", type number}, {\"Referred\", Int64.Type}, {\"ReferredShare\", type number}, {\"TruePositives\", Int64.Type}, {\"Recall\", type number}, {\"Precision\", type number}, {\"ReferredPer1000\", Int64.Type}, {\"MissedAtRisk\", Int64.Type}, {\"IsDeployed\", type text}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "powerbi_dataset_inventory",
+        "description": "The ten GHS 2024 extracts as profiled in Milestone 1: row and column counts, grain, and whether each was selected. Counted directly off data/raw/ by scripts/make_data_foundation.py.",
+        "lineageTag": "0d327eb7-ff74-15ec-5d2b-7fc74c24ef47",
+        "columns": [
+          {
+            "name": "Dataset",
+            "dataType": "string",
+            "sourceColumn": "Dataset",
+            "summarizeBy": "none",
+            "lineageTag": "178f66ea-0374-8ddc-2526-54c150c9641e",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Domain",
+            "dataType": "string",
+            "sourceColumn": "Domain",
+            "summarizeBy": "none",
+            "lineageTag": "d1056440-3e02-c505-368f-e1fbb295dc3d",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Grain",
+            "dataType": "string",
+            "sourceColumn": "Grain",
+            "summarizeBy": "none",
+            "lineageTag": "8af03460-34d2-24fe-0085-543b21a3dd8d",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Rows",
+            "dataType": "int64",
+            "sourceColumn": "Rows",
+            "summarizeBy": "sum",
+            "lineageTag": "be7e4a6c-a42f-f9ba-69f4-6a7af8c6e6fc",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "Columns",
+            "dataType": "int64",
+            "sourceColumn": "Columns",
+            "summarizeBy": "sum",
+            "lineageTag": "7f2f94a9-fc61-e7ee-7d2c-c0062e410ccd",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "Households",
+            "dataType": "int64",
+            "sourceColumn": "Households",
+            "summarizeBy": "sum",
+            "lineageTag": "507e6d1f-9bbd-d968-2561-fa5839effbec",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "DuplicateRows",
+            "dataType": "int64",
+            "sourceColumn": "DuplicateRows",
+            "summarizeBy": "sum",
+            "lineageTag": "ec7a572d-ee29-6034-c455-95eabf7f32f9",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "formatString": "#,0"
+          },
+          {
+            "name": "Selected",
+            "dataType": "string",
+            "sourceColumn": "Selected",
+            "summarizeBy": "none",
+            "lineageTag": "6554646f-0f08-56d9-5148-81fa00bcb7ea",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Reason",
+            "dataType": "string",
+            "sourceColumn": "Reason",
+            "summarizeBy": "none",
+            "lineageTag": "d99cfe88-471f-c8b6-1082-8fd3dae7f531",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_dataset_inventory",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_dataset_inventory.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"Dataset\", type text}, {\"Domain\", type text}, {\"Grain\", type text}, {\"Rows\", Int64.Type}, {\"Columns\", Int64.Type}, {\"Households\", Int64.Type}, {\"DuplicateRows\", Int64.Type}, {\"Selected\", type text}, {\"Reason\", type text}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Datasets provided",
+            "expression": "COUNTROWS(powerbi_dataset_inventory)",
+            "lineageTag": "46fa65bb-0233-7609-a7dc-c0afa41f35b8",
+            "formatString": "#,0",
+            "description": "The ten extracts profiled in Milestone 1.",
+            "displayFolder": "1 Inventory"
+          },
+          {
+            "name": "Datasets selected",
+            "expression": "CALCULATE(COUNTROWS(powerbi_dataset_inventory), powerbi_dataset_inventory[Selected] = \"Yes\")",
+            "lineageTag": "97382f5f-74d8-604f-d6b5-d580d41d24ee",
+            "formatString": "#,0",
+            "description": "The seven household-level files that survived selection.",
+            "displayFolder": "1 Inventory"
+          },
+          {
+            "name": "Datasets set aside",
+            "expression": "[Datasets provided] - [Datasets selected]",
+            "lineageTag": "0dd0be56-dc49-56be-823e-b89b55d1e770",
+            "formatString": "#,0",
+            "displayFolder": "1 Inventory"
+          },
+          {
+            "name": "Rows in selection",
+            "expression": "CALCULATE(SUM(powerbi_dataset_inventory[Rows]), powerbi_dataset_inventory[Selected] = \"Yes\")",
+            "lineageTag": "9362a327-47a5-180a-84b1-47d896f6c719",
+            "formatString": "#,0",
+            "displayFolder": "1 Inventory"
+          },
+          {
+            "name": "Columns profiled",
+            "expression": "SUM(powerbi_dataset_inventory[Columns])",
+            "lineageTag": "3bb205cb-7da0-449a-c75f-73daa5914f65",
+            "formatString": "#,0",
+            "displayFolder": "1 Inventory"
+          },
+          {
+            "name": "Households after de-duplication",
+            "expression": "CALCULATE(MAX(powerbi_dataset_inventory[Households]), powerbi_dataset_inventory[Selected] = \"Yes\")",
+            "lineageTag": "30326596-b812-c6c5-3858-190c0eb400c9",
+            "formatString": "#,0",
+            "description": "20,940 households, before the 15 dropped at cleaning.",
+            "displayFolder": "1 Inventory"
+          },
+          {
+            "name": "Duplicate rows removed",
+            "expression": "CALCULATE(SUM(powerbi_dataset_inventory[DuplicateRows]), powerbi_dataset_inventory[Selected] = \"Yes\")",
+            "lineageTag": "4bf47c3a-ffc8-12ba-82ad-6bbd99731657",
+            "formatString": "#,0",
+            "displayFolder": "1 Inventory"
+          }
+        ]
+      },
+      {
+        "name": "powerbi_data_quality",
+        "description": "The Milestone 2 cleaning log: every data-quality problem found, the column it was in and how it was treated. Before and After are text because they mean different things per row (row counts for the de-duplication entries, value counts for the recodes) and must never be summed.",
+        "lineageTag": "e10fbe50-7489-a893-3060-67b23e97570a",
+        "columns": [
+          {
+            "name": "Dataset",
+            "dataType": "string",
+            "sourceColumn": "Dataset",
+            "summarizeBy": "none",
+            "lineageTag": "0d4b6b1f-2afa-611b-264e-6c3f9f68da7e",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Domain",
+            "dataType": "string",
+            "sourceColumn": "Domain",
+            "summarizeBy": "none",
+            "lineageTag": "65efb3ea-0529-61e5-66bb-3a2ecba1421e",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Column",
+            "dataType": "string",
+            "sourceColumn": "Column",
+            "summarizeBy": "none",
+            "lineageTag": "c33f7109-d895-6502-7eb8-afdc1c7dc79b",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Problem",
+            "dataType": "string",
+            "sourceColumn": "Problem",
+            "summarizeBy": "none",
+            "lineageTag": "47202805-4864-7a59-8ad3-dcc8b0f0512b",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Treatment",
+            "dataType": "string",
+            "sourceColumn": "Treatment",
+            "summarizeBy": "none",
+            "lineageTag": "0f9bc71f-f97c-de94-90ca-1d892a9abd6a",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Before",
+            "dataType": "string",
+            "sourceColumn": "Before",
+            "summarizeBy": "none",
+            "lineageTag": "fd5b4c01-2684-d1f1-a16a-4b20fcc8106d",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "After",
+            "dataType": "string",
+            "sourceColumn": "After",
+            "summarizeBy": "none",
+            "lineageTag": "9f9d7510-cc3c-050e-b062-6581262c9fcc",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          },
+          {
+            "name": "Dataset and column",
+            "type": "calculated",
+            "expression": "powerbi_data_quality[Dataset] & \".\" & powerbi_data_quality[Column]",
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "lineageTag": "0d36272c-c631-5876-4385-85c3957e912c",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "powerbi_data_quality",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(DataFolder & \"powerbi_data_quality.csv\"), [Delimiter = \",\", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),",
+                "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
+                "    Typed = Table.TransformColumnTypes(Promoted, {{\"Dataset\", type text}, {\"Domain\", type text}, {\"Column\", type text}, {\"Problem\", type text}, {\"Treatment\", type text}, {\"Before\", type text}, {\"After\", type text}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Issues logged",
+            "expression": "COUNTROWS(powerbi_data_quality)",
+            "lineageTag": "ecfd1120-cd38-f2d7-34ad-1ff08dd3ccae",
+            "formatString": "#,0",
+            "description": "Rows in the Milestone 2 cleaning log.",
+            "displayFolder": "2 Quality"
+          },
+          {
+            "name": "Issue types",
+            "expression": "DISTINCTCOUNT(powerbi_data_quality[Problem])",
+            "lineageTag": "911e471a-77ff-fafe-0026-e6f2e5fe693b",
+            "formatString": "#,0",
+            "displayFolder": "2 Quality"
+          },
+          {
+            "name": "Datasets repaired",
+            "expression": "DISTINCTCOUNT(powerbi_data_quality[Dataset])",
+            "lineageTag": "2c52b72b-d937-811c-86b8-ba28310994ff",
+            "formatString": "#,0",
+            "displayFolder": "2 Quality"
+          },
+          {
+            "name": "Columns repaired",
+            "expression": "DISTINCTCOUNT(powerbi_data_quality[Dataset and column])",
+            "lineageTag": "c93c00a0-1ef9-8f5d-49ad-87498e28fdf0",
+            "formatString": "#,0",
+            "description": "Counted per dataset, so the same column name in two files counts twice.",
+            "displayFolder": "2 Quality"
+          }
+        ]
+      },
+      {
+        "name": "Threshold",
+        "description": "What-if parameter: the referral threshold a decision-maker can try on the 'How well does the screening tool work?' page. Deployed value 0.24.",
+        "lineageTag": "2e57042d-ee67-ee5d-53f7-9dbef62a0562",
+        "columns": [
+          {
+            "name": "Threshold",
+            "dataType": "double",
+            "type": "calculatedTableColumn",
+            "sourceColumn": "[Value]",
+            "isNameInferred": false,
+            "isDataTypeInferred": true,
+            "summarizeBy": "none",
+            "formatString": "0.00",
+            "description": "GENERATESERIES accumulates 0.01 at a time, so the stored values drift: the step shown as 0.24 is really 0.24000000000000007. Filter or compare with a range (> 0.239 && < 0.241), never = 0.24, which silently matches no rows. The slicer default literal on the performance page already uses the drifted value.",
+            "lineageTag": "32cd3962-57a7-ee09-5fef-731713cdd996",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ]
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Threshold",
+            "mode": "import",
+            "source": {
+              "type": "calculated",
+              "expression": "GENERATESERIES(0, 1, 0.01)"
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Threshold Value",
+            "expression": "SELECTEDVALUE(Threshold[Threshold], 0.24)",
+            "lineageTag": "1a00381d-6955-151e-03b9-7c4c515fba95",
+            "formatString": "0.00",
+            "description": "The threshold currently chosen on the slicer; 0.24 when nothing is selected."
+          }
+        ]
+      }
+    ],
+    "relationships": [],
+    "expressions": [
+      {
+        "name": "DataFolder",
+        "kind": "m",
+        "expression": "\"C:\\Tim\\Varsity\\3rd Year\\BIN381\\Project\\BIN381\\BIN381-P1\\data\\powerbi\\\" meta [IsParameterQuery = true, Type = \"Text\", IsParameterQueryRequired = true]",
+        "lineageTag": "17f040aa-490d-fe57-8492-5c843b011dd5",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navigation"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Text"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "name": "PBI_QueryOrder",
+        "value": "[\"DataFolder\",\"powerbi_households\",\"powerbi_model_summary\",\"powerbi_subgroup_performance\",\"powerbi_permutation_importance\",\"powerbi_odds_ratios\",\"powerbi_reconciliation\",\"powerbi_threshold_curve\",\"powerbi_dataset_inventory\",\"powerbi_data_quality\"]"
+      },
+      {
+        "name": "__PBI_TimeIntelligenceEnabled",
+        "value": "0"
+      }
+    ]
+  }
+}

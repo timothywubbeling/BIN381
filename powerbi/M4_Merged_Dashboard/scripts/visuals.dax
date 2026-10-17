@@ -1,0 +1,50 @@
+// V1 - page 2 drill-down bar chart: Province then Settlement
+EVALUATE
+TOPN(6, SUMMARIZECOLUMNS(powerbi_households[Province], powerbi_households[Settlement],
+    "At risk", [At-risk share (weighted)]), [At risk], DESC)
+--------
+// V2 - page 4 score-band chart, filtered to the test split (visual-level filter)
+EVALUATE
+CALCULATETABLE(
+  TOPN(6, SUMMARIZECOLUMNS(powerbi_households[Score band], powerbi_households[Outcome],
+      "Households", [Households]), powerbi_households[Score band], ASC),
+  powerbi_households[Split] = "Test")
+--------
+// V3 - page 4 threshold curve line chart, three measures on one axis
+EVALUATE
+TOPN(5, SUMMARIZECOLUMNS(powerbi_threshold_curve[Threshold],
+    "Recall", SUM(powerbi_threshold_curve[Recall]),
+    "Precision", SUM(powerbi_threshold_curve[Precision]),
+    "Share referred", SUM(powerbi_threshold_curve[ReferredShare])),
+    powerbi_threshold_curve[Threshold], ASC)
+--------
+// V4 - page 5 subgroup bars, sliced to one breakdown as the slicer would
+EVALUATE
+CALCULATETABLE(
+  SUMMARIZECOLUMNS(powerbi_subgroup_performance[group],
+      powerbi_subgroup_performance[within_tolerance],
+      "Recall", SUM(powerbi_subgroup_performance[recall])),
+  powerbi_subgroup_performance[variable] = "Province")
+--------
+// V5 - page 3 toilet-type bars
+EVALUATE
+TOPN(5, SUMMARIZECOLUMNS(powerbi_households[ToiletType], "At risk",
+    [At-risk share (weighted)]), [At risk], DESC)
+--------
+// V6 - page 7 full reconciliation table as the visual builds it
+EVALUATE
+SUMMARIZECOLUMNS(powerbi_reconciliation[Breakdown], powerbi_reconciliation[Group],
+    "Households", SUM(powerbi_reconciliation[Households]),
+    "At risk %", SUM(powerbi_reconciliation[AtRiskPct_weighted]),
+    "Referred %", SUM(powerbi_reconciliation[ReferredPct]))
+--------
+// V7 - page 6 driver bars and page 3 FI score columns
+EVALUATE
+SUMMARIZECOLUMNS(powerbi_households[FI_Score], "Households", [Households in sample])
+--------
+// V8 - what-if reacting to a different threshold (simulates dragging the slicer to 0.35)
+EVALUATE
+CALCULATETABLE(
+  ROW("Recall", [Recall at threshold], "Precision", [Precision at threshold],
+      "Referred", [Referred at threshold], "Per 1000", [Households referred (per 1,000)]),
+  'Threshold'[Threshold] = 0.35)
