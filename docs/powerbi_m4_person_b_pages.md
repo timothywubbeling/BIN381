@@ -18,11 +18,17 @@ every figure against R and saves the final file.
 
 | | |
 |---|---|
-| Tables loaded | `powerbi_households` (20,925 rows), `powerbi_model_summary`, `powerbi_odds_ratios`, `powerbi_permutation_importance`, `powerbi_subgroup_performance` |
-| Relationships | **None, deliberately.** The tables are different grains (household, metric, predictor, subgroup). Do not create any — it will silently cross-filter the wrong things. |
-| What-if parameter | `Threshold`, decimal, 0 to 1, step 0.01, default **0.24**, with its slicer sitting on Page 1 |
-| Measures | `Test households` only — the other five are below |
+| Tables loaded | `powerbi_households` (20,925 rows), `powerbi_model_summary`, `powerbi_odds_ratios`, `powerbi_permutation_importance`, `powerbi_subgroup_performance` — six with `Threshold` |
+| Relationships | **Zero, deliberately.** The tables are different grains (household, metric, predictor, subgroup). Do not create any — it will silently cross-filter the wrong things. |
+| What-if parameter | `Threshold`, decimal, 0 to 1, step 0.01, default **0.24** |
+| Measures | All six, verified against the evaluation outputs (see §6) |
+| Label columns | `Driver`, `Factor`, `Direction` — all added |
 | Import locale | Set to **English (United States)** |
+| Page 1 | "How well does the screening tool work?" — threshold slicer plus the four metric cards |
+
+Sections 2 and 3 below are **done**; they are kept as a record of what was set up and why. Start at
+§4. The remaining work is the two further pages, the what-if panel and score distribution on page 1,
+and the reconciliation checks in §6.
 
 ### The one trap worth knowing
 
@@ -38,23 +44,30 @@ as `0,24` rather than `0.24` is only display formatting and is fine.
 
 ---
 
-## 2. Housekeeping (2 minutes) — do this first
+## 2. Housekeeping — DONE
 
-**a. Delete the stray measure.** In the Data pane, expand the **Threshold** table and delete the
-field called **`Measure`** (right-click → Delete from model). It is an empty leftover. Keep
-`Threshold` and `Threshold Value`.
+Both of these are already applied. Recorded here so nobody reintroduces them.
 
-**b. Clear the saved TMDL script.** Open **TMDL view** (the `TMDL` icon down the left edge) and
-close the **Script 1** tab (the `x` on the tab), then save.
+**a. The stray empty measure** on the `Threshold` table was deleted. The model now has seven
+measures: the six below plus `Threshold Value`.
 
-That script is a snapshot of `powerbi_subgroup_performance` taken *before* the locale was fixed, so
-it still defines `recall`, `precision` and `pct_flagged` as **string**. It does nothing sitting
-there, but if anyone ever opens TMDL view and clicks **Apply**, it will silently revert that table
-to text columns and every subgroup visual will break. Delete it rather than leave it.
+**b. The saved TMDL script was cleared.** It held a snapshot of `powerbi_subgroup_performance`
+taken *before* the locale was fixed, defining `recall`, `precision` and `pct_flagged` as **string**.
+Inert where it sat, but opening TMDL view and clicking **Apply** would have silently reverted that
+table to text columns and broken every subgroup visual.
+
+**c. A duplicate table was removed.** `powerbi_subgroup_performance` had been loaded twice, and
+Power BI auto-created an **active, bi-directional 1-to-1 relationship** between the two copies on
+`[group]`. The hidden original was deleted and the remaining copy renamed from
+`powerbi_subgroup_performance (2)` back to `powerbi_subgroup_performance`.
+
+If you load one of these CSVs again, check **Manage relationships** afterwards and delete anything
+auto-detected. Autodetect-on-load is on by default, and these tables share column names like
+`group` without sharing a grain.
 
 ---
 
-## 3. The five remaining measures
+## 3. The measures — DONE
 
 **Click `powerbi_households` in the Data pane first**, so each measure lands on that table. Then for
 each one: **Home → New measure**, click into the formula bar, `Ctrl+A`, paste, `Enter`.
