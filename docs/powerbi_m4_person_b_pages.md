@@ -38,10 +38,19 @@ as `0,24` rather than `0.24` is only display formatting and is fine.
 
 ---
 
-## 2. Housekeeping (1 minute)
+## 2. Housekeeping (2 minutes) — do this first
 
-In the Data pane, expand the **Threshold** table. Delete the stray field called **`Measure`**
-(right-click → Delete from model) — it is an empty leftover. Keep `Threshold` and `Threshold Value`.
+**a. Delete the stray measure.** In the Data pane, expand the **Threshold** table and delete the
+field called **`Measure`** (right-click → Delete from model). It is an empty leftover. Keep
+`Threshold` and `Threshold Value`.
+
+**b. Clear the saved TMDL script.** Open **TMDL view** (the `TMDL` icon down the left edge) and
+close the **Script 1** tab (the `x` on the tab), then save.
+
+That script is a snapshot of `powerbi_subgroup_performance` taken *before* the locale was fixed, so
+it still defines `recall`, `precision` and `pct_flagged` as **string**. It does nothing sitting
+there, but if anyone ever opens TMDL view and clicks **Apply**, it will silently revert that table
+to text columns and every subgroup visual will break. Delete it rather than leave it.
 
 ---
 

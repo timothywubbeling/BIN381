@@ -127,16 +127,17 @@ window before you start.
 
 **Why 0.24, and is referring 58.9% of households actually useful at 41.9% precision?**
 > The rule was set before evaluation: at least 80% recall at the fewest referrals. Precision of
-> 41.9% is low because only 30.6% of households are at risk to begin with — the screen roughly
-> doubles the hit rate of visiting households at random. Whether 59% is workable is a capacity
+> 41.9% is low because only 30.6% of households are at risk to begin with — so a referral is about
+> 1.4 times as likely to find an at-risk household as visiting at random. Whether 59% is workable is a capacity
 > question, not a statistical one, which is why the threshold is a slicer in the dashboard. If the
 > institute can visit 30% of households, 0.30 is the right setting and we lose 13 points of recall
 > knowingly.
 
 **Why is the final model binary when the project began with three tiers?**
-> The middle tier is not separable with these eight predictors. The best three-tier model recalls
-> 0.3% of mildly-to-moderately insecure households — effectively none — even with class weights
-> forcing it to look. Three-tier ROC-AUC was about 0.67. A screen that answers "at risk or not" is
+> The middle tier is not separable with these eight predictors. No three-tier model recalls more
+> than 3.2% of mildly-to-moderately insecure households, and the best-ranking one (the forest)
+> manages 0.3% — effectively none — even with class weights forcing it to look. Three-tier
+> ROC-AUC was about 0.67. A screen that answers "at risk or not" is
 > something an official can act on; a severity grade we cannot actually measure is not.
 
 **Why does recall drop to 39% above R11,500 and 62% for no-grant households?**
