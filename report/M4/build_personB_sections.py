@@ -19,7 +19,7 @@ import sys
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt, RGBColor
+from docx.shared import Cm, Pt, RGBColor
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 EVAL = os.path.join(ROOT, "data", "evaluation")
@@ -129,6 +129,17 @@ def od(term):
 # Document helpers
 # ----------------------------------------------------------------------------
 doc = Document()
+
+# Match the Milestone 3 report exactly: A4, 2.54 cm margins. python-docx defaults to
+# US Letter with 3.17 cm sides, which makes the page count here disagree with the page
+# count once Timothy merges these sections into the real document.
+for section in doc.sections:
+    section.page_width = Cm(21.0)
+    section.page_height = Cm(29.7)
+    section.top_margin = Cm(2.54)
+    section.bottom_margin = Cm(2.54)
+    section.left_margin = Cm(2.54)
+    section.right_margin = Cm(2.54)
 
 normal = doc.styles["Normal"]
 normal.font.name = "Calibri"
@@ -241,37 +252,34 @@ para(
     f"{pct(sev[FINAL]['severe_flagged'])} of the severely food insecure, while referring "
     f"{pct(FLAG)} of households at {pct(PREC)} precision. The F2-optimal threshold of "
     f"{num(f2_rule, 'threshold'):.2f} was rejected because it refers "
-    f"{pct(f2_rule['pct_flagged'])} of all households — more outreach capacity than the "
-    f"institute has — and the default 0.5 was rejected because it misses "
+    f"{pct(f2_rule['pct_flagged'])} of all households, and the default 0.5 because it misses "
     f"{pct(1 - num(half_rule, 'recall'))} of at-risk households. The random forest scores "
     f"marginally higher (AUC {num(ev[FOREST], 'screen_auc'):.3f} against {AUC:.3f}; bootstrap "
     f"difference +{float(diff['forest - binary']['mean_diff']):.3f}, 95% CI "
     f"{float(diff['forest - binary']['ci_low']):.3f}–"
     f"{float(diff['forest - binary']['ci_high']):.3f}), but the logistic model was chosen for one "
     f"interpretable odds ratio per factor, equally good calibration and a direct fit with the "
-    f"Shiny app. The gain is real but too small to pay for the loss of explanation in a tool that "
-    f"must justify every referral to an official."
+    f"Shiny app — a gain too small to pay for the loss of explanation in a tool that must "
+    f"justify every referral to an official."
 )
 para(
-    f"The model generalises: cross-validated AUC was {CV_AUC:.3f} against {AUC:.3f} on test, a gap "
-    f"of {CV_GAP:.4f}, so there is no meaningful overfitting. Its probabilities are usable as "
-    f"probabilities rather than just as a ranking (Brier {BRIER:.3f}, expected calibration error "
-    f"{ECE:.3f}). Re-weighting the test set with the survey weights moves recall from "
-    f"{pct(wt['unweighted_recall'])} to {pct(wt['weighted_recall'])}, so the result is not an "
-    f"artefact of the sample design."
+    f"It generalises and it is calibrated: cross-validated AUC {CV_AUC:.3f} against {AUC:.3f} on "
+    f"test (gap {CV_GAP:.4f}, so no meaningful overfitting), Brier {BRIER:.3f} and expected "
+    f"calibration error {ECE:.3f}, so the scores are usable as probabilities and not only as a "
+    f"ranking. Survey-weighting the test set moves recall only from "
+    f"{pct(wt['unweighted_recall'])} to {pct(wt['weighted_recall'])}."
 )
 
 doc.add_heading("What drives risk, and what the data says about the hypotheses", level=2)
 para(
-    "Permutation importance on the test set ranks the drivers consistently across all three "
-    "models: "
+    "Permutation importance ranks the drivers consistently across all three models: "
     + ", ".join(
         f"{PRED_LABEL[r['variable']].lower()} ({float(r['auc_drop']):.3f})" for r in imp[:4]
     )
-    + ". Everything else — electricity, settlement type, toilet type and household size — "
-    "adds little once income is known. The odds ratios below come from an unpenalised logistic fit "
-    "on the training data; Person A's tuned penalty was effectively zero, so they describe the "
-    "deployed model while adding confidence intervals. All of these are associations, not causes."
+    + ". Electricity, settlement type, toilet type and household size add little once income is "
+    "known. The odds ratios below come from an unpenalised logistic fit on the training data "
+    "(Person A's tuned penalty was effectively zero), so they describe the deployed model while "
+    "adding confidence intervals — as associations, not causes."
 )
 
 caption("Table 4.2 Milestone 1 hypotheses against the final evidence (odds ratios with 95% CI)")
@@ -280,64 +288,63 @@ table(
     [
         [
             "H1 Falling income raises risk",
-            f"{obs('ComparativeIncomeCode', '5'):.1f}% food insecure where income is much lower, "
-            f"against {obs('ComparativeIncomeCode', '2'):.1f}–{obs('ComparativeIncomeCode', '3'):.1f}% "
-            f"mid-scale; OR {od('ComparativeIncomeCode5')}. Strongest predictor in every model. "
-            f"But code 1 (much higher) is also {obs('ComparativeIncomeCode', '1'):.1f}%.",
-            "Supported; U-shaped, not linear",
+            f"{obs('ComparativeIncomeCode', '5'):.1f}% vs "
+            f"{obs('ComparativeIncomeCode', '2'):.1f}–{obs('ComparativeIncomeCode', '3'):.1f}% "
+            f"mid-scale; OR {od('ComparativeIncomeCode5')}. But code 1 (much higher) is also "
+            f"{obs('ComparativeIncomeCode', '1'):.1f}%.",
+            "Supported; U-shaped",
         ],
         [
             "H2 Rural households more at risk, income held equal",
-            f"Raw {obs('GeoTypeCode', 'Traditional_Tribal'):.1f}% rural against "
-            f"{obs('GeoTypeCode', 'Urban'):.1f}% urban, but adjusted OR "
+            f"{obs('GeoTypeCode', 'Traditional_Tribal'):.1f}% vs "
+            f"{obs('GeoTypeCode', 'Urban'):.1f}% urban raw; adjusted OR "
             f"{od('GeoTypeCodeTraditional_Tribal')}.",
             "Not supported; the gap is income and services",
         ],
         [
             "H3 Larger households more at risk at fixed income",
-            f"OR {od('HouseholdSize')} per member. Raw rates rise "
-            f"{obs('size', '1-2'):.1f}% → {obs('size', '7+'):.1f}%, but mostly through income per "
-            f"person (importance rank 2).",
-            "Supported, weak direct effect",
+            f"OR {od('HouseholdSize')} per member; raw {obs('size', '1-2'):.1f}% → "
+            f"{obs('size', '7+'):.1f}%, mostly via income per person.",
+            "Supported; weak direct effect",
         ],
         [
             "H4 No electricity raises risk",
-            f"{obs('ElectricityAccessCode', 'No'):.1f}% against "
-            f"{obs('ElectricityAccessCode', 'Yes'):.1f}%; OR {od('ElectricityAccessCodeNo')}. Only ~5% "
-            f"of households lack electricity, so it carries little predictive weight.",
+            f"{obs('ElectricityAccessCode', 'No'):.1f}% vs "
+            f"{obs('ElectricityAccessCode', 'Yes'):.1f}%; OR {od('ElectricityAccessCodeNo')}. Only "
+            f"~5% of households affected.",
             "Supported",
         ],
         [
             "H5 Grant receipt lowers risk",
-            f"The reverse: {obs('grants', '1+ recipients'):.1f}% against "
-            f"{obs('grants', 'None'):.1f}%; OR {od('SocialGrantRecipients')} per recipient. Grants are "
-            f"means-tested, so they mark poorer households.",
-            "Not supported (reversed); targeting, not causation",
+            f"Reversed: {obs('grants', '1+ recipients'):.1f}% vs "
+            f"{obs('grants', 'None'):.1f}%; OR {od('SocialGrantRecipients')} per recipient. Grants "
+            f"are means-tested.",
+            "Not supported; targeting, not cause",
         ],
         [
             "H6 Toilet type is a useful poverty proxy",
-            f"Code 5 (VIP pit latrine, {int([r for r in rates if r['variable'] == 'MainToiletCode' and r['level'] == '5'][0]['households']):,} households) "
-            f"{obs('MainToiletCode', '5'):.1f}% against {obs('MainToiletCode', '1'):.1f}% for flush "
-            f"toilets; OR {od('MainToiletCode5')}. Permutation importance near zero.",
-            "Partly: significant, but little predictive value",
+            f"Code 5 ({int([r for r in rates if r['variable'] == 'MainToiletCode' and r['level'] == '5'][0]['households']):,} households) "
+            f"{obs('MainToiletCode', '5'):.1f}% vs {obs('MainToiletCode', '1'):.1f}%; OR "
+            f"{od('MainToiletCode5')}. Importance near zero.",
+            "Partly; little predictive value",
         ],
     ],
 )
 
 para(
-    f"Performance is uneven, and the gaps matter more than the averages. The screen finds "
+    f"The gaps matter more than the averages. The screen finds "
     f"{pct(sg('income_band', '< R2,500')['recall'])} of at-risk households earning under R2,500 a "
-    f"month but only {pct(sg('income_band', '> R11,500')['recall'])} of those earning over "
-    f"R11,500, and {pct(sg('grant_band', 'No grants')['recall'])} of households with no grant "
-    f"recipients against {pct(sg('grant_band', 'Receives grants')['recall'])} of those with them. "
-    f"By province, recall runs from {pct(sg('province', 'Gauteng')['recall'])} in Gauteng and "
-    f"{pct(sg('province', 'Western Cape')['recall'])} in the Western Cape to "
-    f"{pct(sg('province', 'Eastern Cape')['recall'])} in the Eastern Cape. The model is weakest "
-    f"exactly where food insecurity is least expected, which is a reason to keep self-referral "
-    f"channels open rather than to trust a ‘lower risk’ result."
+    f"month but only {pct(sg('income_band', '> R11,500')['recall'])} of those over R11,500, and "
+    f"{pct(sg('grant_band', 'No grants')['recall'])} of households with no grant recipients "
+    f"against {pct(sg('grant_band', 'Receives grants')['recall'])} of those with them. By province "
+    f"recall runs from {pct(sg('province', 'Gauteng')['recall'])} (Gauteng) to "
+    f"{pct(sg('province', 'Eastern Cape')['recall'])} (Eastern Cape). It is weakest exactly where "
+    f"food insecurity is least expected — a reason to keep self-referral open rather than "
+    f"trust a ‘lower risk’ result."
 )
 
-doc.add_page_break()
+# No page break between sections: these drop into the middle of the merged report,
+# where Sections 5 and 7 (Person C) sit either side of Section 6.
 
 # ----------------------------------------------------------------------------
 # Section 6  -  Recommendations
@@ -357,8 +364,9 @@ bullet(
     f"At threshold {THR:.2f} the tool refers {pct(FLAG)} of households and "
     f"{pct(1 - PREC)} of those referrals turn out to be food secure. Programme managers should "
     f"size follow-up capacity against that rate before go-live, or raise the threshold knowingly "
-    f"and accept lower recall. The institute's analytics team owns the threshold decision jointly "
-    f"with programme managers; it is a policy choice, not a technical one.",
+    f"and accept lower recall; it is a policy choice, not a technical one. Monitoring should raise "
+    f"an alert if recall on followed-up households falls below "
+    f"{pct(base['recall_alert_below'])}.",
 )
 bullet(
     "2. Ask every household about income change over the past year at intake.",
@@ -397,14 +405,6 @@ bullet(
     f"officers, is the only way the institute will see the cases the screen misses. Keep "
     f"self-referral open and never present a low score as clearance.",
 )
-bullet(
-    "6. Re-evaluate at every new GHS release, and improve the inputs before the next model.",
-    f"Monitoring should raise an alert if recall on followed-up households drops below "
-    f"{pct(base['recall_alert_below'])} or the referral rate drifts far from {pct(FLAG)}. The "
-    f"analytics team should add per-person income and employment detail (D01–D03), debt and "
-    f"local food prices, and — most valuable of all — recorded follow-up outcomes, which "
-    f"would let the next model be validated against what officials actually found.",
-)
 
 # ----------------------------------------------------------------------------
 # Section 8  -  Limitations and future work
@@ -422,18 +422,16 @@ para(
 para(
     f"The evidence is one cross-sectional wave of the General Household Survey 2024, so every "
     f"result is an association rather than a cause; the reversed grant finding (H5) is the clearest "
-    f"case where targeting and effect cannot be separated. The target itself is a proxy built from "
-    f"self-reported food-insecurity items, which carry recall and social-desirability bias. The "
-    f"three-tier version of the target was abandoned because the middle tier is not separable with "
-    f"these predictors, so the tool cannot grade severity, only flag risk. Training used the "
-    f"unweighted sample; the survey-weighted check moves recall by about "
-    f"{abs(num(wt, 'unweighted_recall') - num(wt, 'weighted_recall')) * 100:.1f} points. Person-level "
-    f"files (D01–D03) and the separate D11 labour survey were excluded in Milestone 2, and 15 "
-    f"households with no valid food-insecurity answers are unscorable. Small subgroups — farms "
-    f"({int(sg('GeoTypeCode', 'Farms')['households']):,} test households) and the smaller provinces "
-    f"— have wide confidence intervals, so their apparent gaps cannot be judged precisely. "
-    f"Most importantly, the model has never been validated outside this survey: there is no "
-    f"external cohort and no record of what officials found when they followed up."
+    f"case where targeting and effect cannot be separated. The target is itself a proxy built from "
+    f"self-reported items, which carry recall and social-desirability bias, and its three-tier "
+    f"version was abandoned because the middle tier is not separable with these predictors, so the "
+    f"tool cannot grade severity. Training used the unweighted sample (survey-weighting moves "
+    f"recall by {abs(num(wt, 'unweighted_recall') - num(wt, 'weighted_recall')) * 100:.1f} points); "
+    f"the person-level files D01–D03 and the D11 labour survey were excluded in Milestone 2; "
+    f"and small subgroups such as farms "
+    f"({int(sg('GeoTypeCode', 'Farms')['households']):,} test households) have intervals too wide "
+    f"to judge. Most importantly, the model has never been validated outside this survey: there is "
+    f"no external cohort and no record of what officials found when they followed up."
 )
 para(
     "Future work follows from those gaps, in order of value. First, capture follow-up outcomes so "
