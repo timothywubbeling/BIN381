@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Assemble the merged Milestone 4 Power BI project (PBIP) and validate it."""
+import base64
+import gzip
 import json
 import os
 import re
@@ -65,12 +67,56 @@ for c in ("powerbi_dataset_inventory.csv", "powerbi_data_quality.csv"):
     shutil.copy2(os.path.join(FOUNDATION_SRC, c), os.path.join(DATA, c))
 
 # -------------------------------------------------------------- semantic model
-data_folder = os.path.abspath(DATA).replace("/", "\\")
-if not data_folder.endswith("\\"):
-    data_folder += "\\"
+# Each table's CSV is gzipped and base64-encoded straight into its partition, so the
+# model carries its own data and needs no file path on any machine. A leading UTF-8
+# BOM is stripped first so the first column name survives Table.PromoteHeaders.
 bim = json.dumps(MODEL, indent=2, ensure_ascii=False)
-bim = bim.replace("%%DATAFOLDER%%", data_folder.replace("\\", "\\\\"))
+embedded = {}
+for token in sorted(set(re.findall(r"%%EMBED:([^%]+)%%", bim))):
+    raw = open(os.path.join(DATA, token), "rb").read()
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    b64 = base64.b64encode(gzip.compress(raw, 9)).decode("ascii")
+    # Plain concatenation, not %-formatting: "%%EMBED:%s%%" % token collapses each
+    # %% to a single %, which leaves a stray % glued to the base64 and makes Power
+    # Query fail every table with "[Expression.Error] Invalid binary encoding."
+    bim = bim.replace("%%EMBED:" + token + "%%", b64)
+    embedded[token] = (raw, b64)
+    print("  embedded %-38s %9s bytes -> %9s base64"
+          % (token, f"{len(raw):,}", f"{len(b64):,}"))
+
+if "EMBED" in bim or "%%" in bim:
+    sys.exit("unreplaced embed token left in model.bim")
+
+# Read the payloads back out of the finished file and decode them, so a mangled
+# literal fails the build instead of failing in Power BI.
+check = json.loads(bim)
+seen = 0
+for t in check["model"]["tables"]:
+    src = t["partitions"][0]["source"]
+    if src.get("type") != "m":
+        continue
+    joined = "\n".join(src["expression"])
+    found = re.search(r'Binary\.FromText\("([^"]+)"', joined)
+    if not found:
+        sys.exit("table %s has no embedded payload" % t["name"])
+    payload = found.group(1)
+    stray = sorted(set(c for c in payload if not (c.isalnum() or c in "+/=")))
+    if stray:
+        sys.exit("table %s: payload has non-base64 characters %r" % (t["name"], stray))
+    match = [k for k, (_, b) in embedded.items() if b == payload]
+    if not match:
+        sys.exit("table %s: payload does not match any source file" % t["name"])
+    original = embedded[match[0]][0]
+    if gzip.decompress(base64.b64decode(payload)) != original:
+        sys.exit("table %s: embedded payload does not round-trip" % t["name"])
+    seen += 1
+if seen != len(embedded):
+    sys.exit("embedded %d payloads but only %d tables carry one" % (len(embedded), seen))
+
 write(os.path.join(SEMANTIC, "model.bim"), bim + "\n", raw=True)
+print("  %d tables embedded and round-tripped, model.bim is %.2f MB"
+      % (seen, len(bim) / 1048576))
 write(os.path.join(SEMANTIC, "definition.pbism"), {
     "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/semanticModel/"
                "definitionProperties/1.0.0/schema.json",
@@ -148,10 +194,10 @@ write(os.path.join(OUT, NAME + ".pbip"), {
     "settings": {"enableAutoRecovery": True},
 })
 write(os.path.join(OUT, ".gitignore"),
-      "**/.pbi/localSettings.json\n**/.pbi/cache.abf\n*.pbix\n", raw=True)
+      "**/.pbi/localSettings.json\n**/.pbi/cache.abf\n", raw=True)
 
 # ======================================================== validation
-print("Validating against the semantic model ...")
+print("\nValidating against the semantic model ...")
 cols, meas = {}, {}
 for t in MODEL["model"]["tables"]:
     cols[t["name"]] = {c["name"] for c in t["columns"]}
@@ -249,4 +295,5 @@ if problems:
         print("  -", x)
     sys.exit(1)
 print("\nAll field references, ids, bounds and overlaps OK.")
-print("DataFolder parameter -> %s" % data_folder)
+print("Data is embedded in model.bim; the project has no file dependency and no "
+      "parameter to set.")

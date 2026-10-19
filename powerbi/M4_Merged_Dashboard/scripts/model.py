@@ -43,11 +43,26 @@ def measure(table, name, expr, fmt=None, desc=None, folder=None):
     return m
 
 def csv_partition(table, filename, types):
+    """An import partition whose data is embedded in the model, not read from disk.
+
+    The table's CSV is gzipped, base64-encoded and inlined by build.py in place of
+    the %%EMBED:...%% token. This is deliberate: an earlier version read the CSVs
+    through a DataFolder parameter holding an absolute path, which meant the file
+    only refreshed on the machine that built it. Everywhere else all nine tables
+    failed at once, which looks like the data is missing from the repository.
+
+    Embedding costs about 0.5 MB in model.bim and makes the project open and
+    refresh on any machine with no parameter to set and no file access at all.
+    The trade-off is that new data needs scripts/build.py re-run to re-embed it;
+    the retrain sequence in the README says so.
+    """
     typed = ", ".join('{{"{}", {}}}'.format(n, t) for n, t in types)
     expr = [
         "let",
-        '    Source = Csv.Document(File.Contents(DataFolder & "%s"), '
-        '[Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),' % filename,
+        '    Compressed = Binary.FromText("%%EMBED:' + filename + '%%", '
+        'BinaryEncoding.Base64),',
+        "    Source = Csv.Document(Binary.Decompress(Compressed, Compression.GZip), "
+        '[Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),',
         "    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),",
         '    Typed = Table.TransformColumnTypes(Promoted, {%s}, "en-US")' % typed,
         "in",
@@ -532,18 +547,12 @@ MODEL = {
         "tables": [households, model_summary, subgroup, importance, odds, recon, curve,
                    inventory, quality, threshold],
         "relationships": [],
-        "expressions": [
-            {"name": "DataFolder",
-             "kind": "m",
-             "expression": '"%%DATAFOLDER%%" meta [IsParameterQuery = true, Type = "Text", '
-                           'IsParameterQueryRequired = true]',
-             "lineageTag": lt("expr/DataFolder"),
-             "annotations": [{"name": "PBI_NavigationStepName", "value": "Navigation"},
-                             {"name": "PBI_ResultType", "value": "Text"}]},
-        ],
+        # No shared expressions: the tables carry their own data, so there is no
+        # DataFolder parameter and nothing to repoint on another machine.
+        "expressions": [],
         "annotations": [
             {"name": "PBI_QueryOrder",
-             "value": '["DataFolder","powerbi_households","powerbi_model_summary",'
+             "value": '["powerbi_households","powerbi_model_summary",'
                       '"powerbi_subgroup_performance","powerbi_permutation_importance",'
                       '"powerbi_odds_ratios","powerbi_reconciliation",'
                       '"powerbi_threshold_curve","powerbi_dataset_inventory",'

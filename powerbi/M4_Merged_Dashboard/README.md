@@ -25,20 +25,33 @@ promised province drill-down was not actually in the file. Pages 2 and 3 are tho
 Power BI Desktop 2.159.883.0 or later.
 
 1. Open `BIN381_M4_Dashboard_Group_P1.pbip`.
-2. **Home → Refresh.** The first open shows empty visuals until you do — a `.pbip` stores no data.
-3. Check the `Threshold` slicer on page 4 reads **0.24**.
+2. **Home → Refresh.** A `.pbip` stores no cached data, so the visuals are empty until you do this
+   once. The refresh reads the snapshot embedded in the file — it touches no folder and cannot fail
+   on a missing path.
+3. Check the `Threshold` slicer on the "How well the screen works" page reads **0.24**.
 4. **File → Save as** → `powerbi/BIN381_M4_Dashboard_Group_P1.pbix`, beside Person B's file (keep
    that one as the record of the first iteration).
 
-The `DataFolder` parameter points at this repository's `data/powerbi/`, as an absolute path:
+**Hand the `.pbix` to the markers, not the `.pbip`.** A `.pbix` has the data compiled in and opens
+with everything on screen, no refresh needed. The `.pbip` is the version-controlled source.
 
-```
-C:\Tim\Varsity\3rd Year\BIN381\Project\BIN381\BIN381-P1\data\powerbi\
-```
+**There is nothing to configure.** Every table carries its own data: each CSV is gzipped,
+base64-encoded and inlined into its partition in `model.bim`. The model reads no files, so there is
+no parameter to repoint and no path that can be wrong. It opens and refreshes on any machine.
 
-**On any other machine, change it first:** Transform data → Manage parameters → `DataFolder`, set it
-to your own clone's `data\powerbi\`, keeping the trailing backslash. Power Query cannot take a
-relative path, so this is the one value that is not portable.
+That was not true of the first version, which read the CSVs through a `DataFolder` parameter holding
+an absolute path. It worked only on the machine that built it; anywhere else all nine tables failed
+at once, which looks exactly like the data being missing from the repository. Embedding costs about
+0.5 MB in `model.bim` and removes the whole class of problem.
+
+> **The one thing that can still break it: path length.** A PBIP nests
+> `…/<name>.Report/definition/pages/<20 chars>/visuals/<20 chars>/visual.json`, about 115 characters
+> below the project folder. Windows refuses paths over 260 characters unless long-path support is
+> on (it is off by default), and Power BI then opens a blank *Untitled* document instead of the
+> project, with no error that explains why. Inside this repository the longest path is 198
+> characters, so there is ~60 to spare. **Clone somewhere short** — `C:\BIN381\` is ideal, a deep
+> `OneDrive - …\Documents\…` path is not. To check: the longest file path under
+> `powerbi/M4_Merged_Dashboard/` must stay under 260.
 
 > **Locale.** The model sets `culture: en-US` and every import step types its columns with the
 > `en-US` locale, so the comma-decimal trap documented in `docs/powerbi_m4_person_b_pages.md`
@@ -127,6 +140,7 @@ XMLA endpoint. Every figure below was read out of the live model.
 | Rows in selection · households after de-dup | 146,626 · 20,940 | identical |
 | Duplicate rows removed · columns profiled | 46 · 229 | identical |
 | Cleaning-log entries · problem types · columns | 115 · 16 · 113 | identical |
+| **Opens and refreshes with no data folder present** | **all 9 tables load** | **copied to `C:\PBITest\`, nothing else nearby: 20,925 households and every figure above identical** |
 
 Reproduce it while the file is open:
 
@@ -160,9 +174,14 @@ python scripts/build.py <out-dir> <extracted-Main-Dash.pbix> <repo>/data/powerbi
 - `scripts/model.py` — the semantic model: 10 tables, 43 measures, 10 calculated columns, and
   deliberately **zero relationships** (the tables are different grains; if you re-import a CSV,
   open Manage relationships and delete anything autodetect created).
-- `scripts/build.py` — assembles the project, then validates every field reference against the
-  model and checks visual ids, canvas bounds and overlaps. Exits non-zero on any problem. The sixth
-  argument points `DataFolder` at an existing data directory instead of keeping a private copy.
+- `scripts/build.py` — assembles the project, embeds the nine CSVs, then validates: it decodes
+  every embedded payload back out of the finished `model.bim` and compares it with the source file,
+  and checks every field reference against the model plus visual ids, canvas bounds and overlaps.
+  Exits non-zero on any problem. The sixth argument is the data directory to embed from.
+
+**Because the data is embedded, a refresh in Power BI re-reads the snapshot inside the file, not
+`data/powerbi/`.** New data therefore needs `build.py` re-run to re-embed it; the retrain sequence
+below says so. The build fails rather than embed a payload that does not round-trip.
 
 It replaces the `.Report` and `.SemanticModel` folders only; this README and `scripts/` are left
 alone. Once anyone starts editing in the Power BI UI the generator stops being the source of truth —
@@ -181,8 +200,12 @@ uses the drifted literal, as Person B's file did.
 
 **After a retrain, in order:** `R/export_powerbi.R` → `R/make_threshold_curve.R` →
 `python scripts/make_data_foundation.py <repo> <repo>/data/powerbi` →
-`python report/M4/check_numbers.py` → open this project, Refresh, check page 9 reads 0.0 for all
-nine provinces → re-save the `.pbix` → re-take the screenshots.
+**`python scripts/build.py` to re-embed the new data** → `python report/M4/check_numbers.py` →
+open this project, Refresh, check the Reconciliation page reads 0.0 for all nine provinces →
+re-save the `.pbix` → re-take the screenshots.
+
+Skipping the `build.py` step leaves the dashboard showing the previous snapshot while the CSVs and
+the report say something else — the Reconciliation page is what catches that.
 
 Monitoring thresholds, retraining and retirement triggers, model version and rollback are in
 `report/M4/BIN381_M4_Handover_and_Maintenance.md`.

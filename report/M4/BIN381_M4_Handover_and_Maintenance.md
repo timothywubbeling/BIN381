@@ -88,7 +88,12 @@ is the most likely reason this tool will quietly stop working.
 
 **After any retrain, in order:** `R/export_powerbi.R` → `R/make_threshold_curve.R` →
 `python powerbi/M4_Merged_Dashboard/scripts/make_data_foundation.py . data/powerbi` →
+`python powerbi/M4_Merged_Dashboard/scripts/build.py` (re-embeds the new data into the dashboard) →
 `python report/M4/check_numbers.py` → refresh and re-save the dashboard → re-take screenshots.
+
+The dashboard carries its own copy of the nine tables, so skipping the `build.py` step leaves it
+showing the previous snapshot while the CSVs and the report say something else. The Reconciliation
+page is what catches that.
 
 ## Known issues
 
@@ -109,7 +114,12 @@ is the most likely reason this tool will quietly stop working.
    same 86 rows.
 6. **`Threshold[Threshold]` values drift** in the dashboard's what-if table: the step shown as 0.24
    is stored as 0.24000000000000007. Filter with a range, never `= 0.24`.
-7. **Report sections 5 and 7 run to about three pages** against a 2.5-page budget. If the report
+7. **Clone the repository somewhere short.** A Power BI project nests its report definition about
+   115 characters deep, Windows refuses paths over 260 characters unless long-path support is
+   enabled (it is off on our machines), and Power BI then silently opens a blank *Untitled*
+   document instead of the project. The longest path inside the repository is 198 characters, so
+   `C:\BIN381\` is safe and a deep `OneDrive - …\Documents\…` path is not.
+8. **Report sections 5 and 7 run to about three pages** against a 2.5-page budget. If the report
    overruns ten pages, cut §5.3's bullet detail and §7's transparency paragraph first — both are
    covered at greater length in the M3 report and the ethics log.
 

@@ -75,8 +75,15 @@ ETHICS = [
      "so every count is traceable; Before and After are carried as text because they mean "
      "different things per row and must not be summed",
      "C"),
-    ("E4-10", TODO, "Modelling / data", TODO, TODO, "A"),
-    ("E4-11", TODO, "Evaluation", TODO, TODO, "B"),
+    ("E4-10", "19 Oct", "Reproducibility",
+     "The dashboard read its nine tables through a parameter holding an absolute path, so it only "
+     "worked on the machine that built it and showed errors and empty visuals everywhere else",
+     "Each table's data was gzipped and embedded in the model, removing the parameter and all "
+     "file access, so the file behaves the same for every member; the build now decodes each "
+     "payload back out and fails rather than ship one that does not round-trip",
+     "C"),
+    ("E4-11", TODO, "Modelling / data", TODO, TODO, "A"),
+    ("E4-12", TODO, "Evaluation", TODO, TODO, "B"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -153,6 +160,20 @@ AI = [
      "were re-queried and had not changed.",
      "Accepted. Claude also found that its own build script deleted the project's README and "
      "scripts folder on every rebuild, and fixed it. The dashboard is now nine pages."),
+    ("AI-M4-C8", "19 Oct 2026\nTimothy (C)\nClaude (Anthropic)",
+     "Fixing the dashboard for the rest of the team. We opened the committed dashboard and got "
+     "errors on every visual and no data. Claude diagnosed it as the absolute path in the "
+     "DataFolder parameter, which only resolved on the machine that built the file, and replaced "
+     "the file-based tables with data embedded in the model so there is no path and no parameter.",
+     "Tested by copying the dashboard to a folder with no data directory anywhere near it: all "
+     "nine tables loaded, 20,925 households, and every figure matched the earlier run including "
+     "the province reconciliation at 0.0 points. The first attempt at embedding failed in Power "
+     "BI with 'Invalid binary encoding'; Claude traced that to a formatting bug in its own build "
+     "script, fixed it, and added a check that decodes each embedded table back out and fails the "
+     "build if it does not match the source file.",
+     "Accepted. Claude also found that a long folder path makes Power BI open a blank document "
+     "instead of the project, with no explanatory error, and wrote that up as a known issue with "
+     "the advice to clone somewhere short."),
     ("AI-M4-A1", TODO, TODO, TODO, TODO),
     ("AI-M4-B1", TODO, TODO, TODO, TODO),
 ]
