@@ -37,16 +37,17 @@ Desktop, Word or a person.
    that the assistant built the dashboard pages). Appendix A of the report carries these entries.
 2. ~~Alexander's two dashboard pages~~ — done. The merged dashboard has "Where the need is" and
    "Who is affected" as pages 2 and 3, so recommendation 4's province drill-down exists.
-3. ~~The slide deck~~ — built: `BIN381_M4_Slides_Group_P1.pptx`, ten slides with speaker notes,
-   from these notes and Timothy's. Slides 1–4 are drafted from the report and are **Alexander's to
-   approve**.
+3. ~~The slide deck~~ — built: `BIN381_M4_Slides_Group_P1.pptx`, ten slides with speaker notes.
+   Alexander's seven slides, with Timothy's 8 to 10 appended in the same layout. Slides 1–4 got
+   draft speaker notes; everything else is as their author wrote it.
 4. ~~Hand to Timothy~~ — merged: `BIN381_M4_Report_Group_P1.docx`, sections 1 to 8 in order with
    both appendices (`merge_final_report.py`).
 5. **Still to do, and only on a machine with the applications** (see the repository `README.md`,
    *Milestone 4 deliverables*): save the dashboard as a `.pbix`, export the nine page screenshots
-   over `docs/figures/pbi_m4_*.png`, check the 10-page limit in Word and export the report PDF,
-   and fill the `TO CONFIRM` rows in the ethics log — Alexander's and Rudi's entries and
-   reflections.
+   over `docs/figures/pbi_m4_*.png` (section 5 and the deck pick them up on the next build), and
+   check the 10-page limit in Word before exporting the report PDF.
+6. **Rudi's reflection** is the one piece of writing still missing, in section 8 of the ethics and
+   AI log. Alexander's is in; Timothy's is a draft he is rewriting.
 
 ## Numbers that matter
 

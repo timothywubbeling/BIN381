@@ -93,7 +93,7 @@ drift from the notebooks. The build scripts are Python and need `python-docx`
 | Report sections | `report/M4/BIN381_M4_PersonB_Sections_4_6_8.docx`, `..._PersonC_Sections_5_7.docx` | `python report/M4/build_personB_sections.py`, `build_personC_sections.py` |
 | Every quoted figure | — | `python report/M4/check_numbers.py` — exits non-zero if any deliverable stops reconciling with `data/evaluation/` |
 | Power BI dashboard | `powerbi/M4_Merged_Dashboard/` (PBIP source) → save as `powerbi/BIN381_M4_Dashboard_Group_P1.pbix` | `powerbi/M4_Merged_Dashboard/README.md` — open the `.pbip`, **Refresh**, check the Threshold slicer reads 0.24, then *Save as* the `.pbix`. Hand the markers the `.pbix` |
-| Presentation | `report/M4/BIN381_M4_Slides_Group_P1.pptx` | `python report/M4/build_slides.py`, from the speaker notes in `report/M4/BIN381_M4_PersonB_Slides_5_to_7.md` and `..._PersonC_Slides_8_to_10.md` |
+| Presentation | `report/M4/BIN381_M4_Slides_Group_P1.pptx` | `python report/M4/build_slides.py` — appends Person C's slides 8–10, from `..._PersonC_Slides_8_to_10.md`, to Alexander's slides 1–7 in `BIN381_M4_PersonA_Slides_1_4.pptx`, in his layout |
 | Analysis by CRISP-DM phase | `notebook/BIN 381 Milestone 4 - CRISP-DM Driver (Group P1).Rmd` | Knit it; it also checks every artifact it names is present |
 | Final dataset and dictionary | `data/integrated/M2_final_modelling_dataset.rds`, `BIN381_M2_Data_Dictionary.csv` | Knit the Milestone 2 notebooks (see *Reproduce everything*) |
 | Shiny app | `app/` | `shiny::runApp("app")` |

@@ -112,8 +112,12 @@ page is what catches that.
    where the shipped CSV was generated (the Python equivalent in the dashboard's `scripts/`
    produced it, and it reconciles exactly). Run the R version once and confirm it reproduces the
    same 86 rows.
-6. **`Threshold[Threshold]` values drift** in the dashboard's what-if table: the step shown as 0.24
-   is stored as 0.24000000000000007. Filter with a range, never `= 0.24`.
+6. **The what-if threshold values are exact, and must stay that way.** `GENERATESERIES(0, 1, 0.01)`
+   stored 0.24 as 0.24000000000000007, which dropped the 26 test households scoring exactly 0.2400
+   and made the what-if cards contradict the fixed ones (80.4% against 80.7%). The table is built
+   from `SELECTCOLUMNS(GENERATESERIES(0, 100, 1), "Threshold", [Value] / 100)` and
+   `Threshold Value` rounds to two decimals. If anyone rebuilds that table, check at 0.24 that both
+   rows of cards read 80.7% / 41.9% / 589 before saving.
 7. **Clone the repository somewhere short.** A Power BI project nests its report definition about
    115 characters deep, Windows refuses paths over 260 characters unless long-path support is
    enabled (it is off on our machines), and Power BI then silently opens a blank *Untitled*

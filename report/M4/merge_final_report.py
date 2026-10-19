@@ -14,7 +14,9 @@ import os
 import re
 
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
+from docx.shared import Cm
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -147,6 +149,45 @@ replace_text(section5 + section7, PERSON_C_CAPTIONS)
 before_recommendations = anchor(base, "Recommendations")
 for el in section5:
     before_recommendations.addprevious(el)
+
+# --- The section 5 screenshots --------------------------------------------------------
+# Person C's section carries a bracketed placeholder instead of the dashboard figures. The
+# pictures have to be added here, to the finished document, so their relationships belong to
+# it. The merged dashboard's own exports are preferred and picked up as soon as they exist.
+FIGURES = os.path.abspath(os.path.join(HERE, "..", "..", "docs", "figures"))
+WANTED = [("pbi_m4_1_overview.png", "the landing page"),
+          ("pbi_m4_4_performance.png", "test-set performance with the threshold what-if")]
+FALLBACK = {"pbi_m4_4_performance.png": "pbi_b1_performance.png"}
+
+
+def available():
+    for name, what in WANTED:
+        path = os.path.join(FIGURES, name)
+        if os.path.exists(path):
+            yield path, what, False
+        elif name in FALLBACK and os.path.exists(os.path.join(FIGURES, FALLBACK[name])):
+            yield os.path.join(FIGURES, FALLBACK[name]), what, True
+
+
+placeholder = anchor(base, "[Figures")
+shots = list(available())
+substitutes = [os.path.basename(p) for p, _, sub in shots if sub]
+if shots:
+    width = Cm(15.5 / len(shots))
+    holder = base.add_paragraph()                      # built at the end, then moved into place
+    holder.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for i, (path, _, _) in enumerate(shots):
+        if i:
+            holder.add_run("  ")
+        holder.add_run().add_picture(path, width=width)
+    placeholder.addprevious(holder._p)
+    caption = anchor(base, "Figures 3-4")
+    if len(shots) == 1:
+        caption.find(qn("w:r")).find(qn("w:t")).text = (
+            "Figure 3  " + shots[0][1][0].upper() + shots[0][1][1:] + ".")
+    placeholder.getparent().remove(placeholder)
+else:
+    substitutes = ["no dashboard screenshot found; the placeholder is still in section 5"]
 before_limitations = anchor(base, "Limitations and future work")
 for el in section7:
     before_limitations.addprevious(el)
@@ -247,5 +288,7 @@ print("  appendices: " + " | ".join(headings(False)[1:]))
 print("  tables    : %d, captions renumbered to Table 1-11" % len(out.tables))
 print("  font      : Calibri forced on %d body runs" % fonts)
 print("  contents  : marked dirty, so Word rebuilds it when the file is opened")
+for name in substitutes:
+    print("  figure     : used " + name + " until the merged dashboard is exported")
 for note in dropped:
     print("  dropped team note: " + note[:90])
