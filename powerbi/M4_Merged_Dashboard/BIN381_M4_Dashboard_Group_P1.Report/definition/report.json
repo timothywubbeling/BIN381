@@ -3,10 +3,20 @@
   "themeCollection": {
     "baseTheme": {
       "name": "Fluent2-CY26SU08",
+      "reportVersionAtImport": {
+        "visual": "2.12.0",
+        "report": "3.4.0",
+        "page": "2.3.1"
+      },
       "type": "SharedResources"
     },
     "customTheme": {
       "name": "Innovate",
+      "reportVersionAtImport": {
+        "visual": "2.12.0",
+        "report": "3.4.0",
+        "page": "2.3.1"
+      },
       "type": "SharedResources"
     }
   },

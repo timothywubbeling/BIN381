@@ -148,8 +148,12 @@ for src, dst in [
 write(os.path.join(REPORT, "definition", "report.json"), {
     "$schema": REPORT_SCHEMA,
     "themeCollection": {
-        "baseTheme": {"name": "Fluent2-CY26SU08", "type": "SharedResources"},
-        "customTheme": {"name": "Innovate", "type": "SharedResources"},
+        "baseTheme": {"name": "Fluent2-CY26SU08",
+                      "reportVersionAtImport": pbir.THEME_IMPORT_VERSION,
+                      "type": "SharedResources"},
+        "customTheme": {"name": "Innovate",
+                        "reportVersionAtImport": pbir.THEME_IMPORT_VERSION,
+                        "type": "SharedResources"},
     },
     "objects": {
         "section": [{"properties": {"verticalAlignment": pbir.s("Top")}}],

@@ -12,6 +12,10 @@ REPORT_SCHEMA = ("https://developer.microsoft.com/json-schemas/fabric/item/repor
                  "definition/report/3.3.0/schema.json")
 VERSION_SCHEMA = ("https://developer.microsoft.com/json-schemas/fabric/item/report/"
                   "definition/versionMetadata/1.0.0/schema.json")
+# Power BI requires this on every entry in themeCollection and opens the project with an
+# error about report.json without it. The values are the ones Power BI Desktop itself wrote
+# into the Milestone 3 report, which opens clean.
+THEME_IMPORT_VERSION = {"visual": "2.12.0", "report": "3.4.0", "page": "2.3.1"}
 
 # -- Tim's "Innovate" dark palette -------------------------------------------
 FONT = "IBM Plex Sans, Segoe UI, system-ui, sans-serif"
