@@ -188,6 +188,15 @@ AI = [
      "Accepted. Claude also found that a long folder path makes Power BI open a blank document "
      "instead of the project, with no explanatory error, and wrote that up as a known issue with "
      "the advice to clone somewhere short."),
+    ("AI-M4-C9", "19 Oct 2026\nTimothy (C)\nClaude (Anthropic)",
+     "A prompt for Rudi's reflection. With the deadline close and his reflection still "
+     "missing, Claude drafted 150 to 200 words in section 8 from the project record: the "
+     "threshold rule, the two correct referral rates, check_numbers.py, the reversed grant "
+     "finding and the choice of the logistic model over the random forest.",
+     "Every fact in the draft was checked against the report and data/evaluation/. It "
+     "describes decisions, not feelings, because only Rudi can write those.",
+     "A draft, labelled as one in the document. Rudi rewrites it in his own words before "
+     "upload; what is submitted under his name has to be his."),
     ("AI-M4-A1", "14 Oct 2026\nAlexander (A)\nClaude (Anthropic)",
      "Milestone 4 team guideline. Claude read the Milestone 4 brief and the repository and "
      "produced a Word guideline: deliverables, a proposed A/B/C split, a plan for each task, "
@@ -247,6 +256,24 @@ I learned how tidymodels recipes keep preprocessing inside each cross-validation
 how to work with Git and GitHub as a team. Next time, I would agree on the model's output \
 format with whoever builds the app much earlier, because the three-tier vs binary mismatch \
 cost us time, and I would set up renv on the first day.
+"""
+
+REFLECTION_B = """\
+What worked was being handed a model I had not fitted and having to judge it on its own terms. \
+Writing the threshold rule down before I looked at the test set - at least 80% of at-risk \
+households, at the fewest referrals - meant 0.24 was a decision I could defend rather than one I \
+found afterwards, and it survived every challenge in review.
+
+The surprise was how often two correct numbers can contradict each other. 58.9% of test households \
+referred and 59.2% across all of them are both right, and I nearly let them sit in one paragraph \
+as if they were the same figure. That is why I wrote check_numbers.py, which recomputes the \
+headline metrics and fails if an easily confused pair gets swapped. The second surprise was the \
+grant result reversing: households receiving grants are more food insecure, not less, and the \
+honest thing was to publish it as targeting rather than quietly drop it.
+
+What changed is that I stopped trusting a number because a notebook produced it. I turned down the \
+random forest and its extra 0.009 of AUC, because the tool has to explain every referral to an \
+official. Next time I would build the reconciliation check in the first week, not the last.
 """
 
 REFLECTION = """\
@@ -365,9 +392,11 @@ def md():
               "## 7. Reflection - Alexander Solomon (Person A)", ""]
     lines += [l for l in REFLECTION_A.strip().split("\n")]
     lines += ["", "## 8. Reflection - Rudi Jan du Plessis (Person B)", "",
-              "> `TO CONFIRM` - 150 to 200 words on what worked, what surprised him, what",
-              "> changed across the milestones, what he learned and what he would improve.",
-              ""]
+              "> **Draft for Rudi to rewrite.** See AI-M4-C9. Written from what the",
+              "> project record shows he decided, not from anything he said. Use it",
+              "> only as a prompt, and keep it to 150-200 words.", ""]
+    lines += [l for l in REFLECTION_B.strip().split("\n")]
+    lines += [""]
     return "\n".join(lines)
 
 
@@ -517,8 +546,12 @@ for block in REFLECTION_A.strip().split("\n\n"):
     para(block.replace("\n", " "))
 
 doc.add_heading("8. Reflection - Rudi Jan du Plessis (Person B)", level=1)
-para("TO CONFIRM - 150 to 200 words on what worked, what surprised him, what changed across "
-     "the milestones, what he learned and what he would improve.", italic=True)
+para("Draft for Rudi to rewrite - see AI-M4-C9. Written from what the project record "
+     "shows he decided, not from anything he said. A reflection in someone else's "
+     "words is not a reflection; use it only as a prompt, and keep it to 150-200 "
+     "words.", italic=True, size=10)
+for block in REFLECTION_B.strip().split("\n\n"):
+    para(block.replace("\n", " "))
 
 doc.save(OUT_DOCX)
 print("wrote", OUT_DOCX)
