@@ -159,8 +159,9 @@ AI = [
      "Reflection. Claude produced a first draft of my personal reflection from this session's work "
      "and the project history.",
      "Not applicable - a personal reflection cannot be verified against data.",
-     "Rewritten by me in my own words. A reflection that I did not write would not be my "
-     "reflection, and this entry records that a draft existed."),
+     "Claude drafted it from the work in this log; I read it, cut what was not true of "
+     "my own experience and kept what was. The judgements in it are mine and this entry "
+     "records that the first draft was not."),
     ("AI-M4-C7", "18 Oct 2026\nTimothy (C)\nClaude (Anthropic)",
      "Restoring the Milestone 1 metrics. I asked whether any of my Milestone 1 dashboard metrics "
      "had been lost in the merge. Claude audited it, reported that the food-security measures had "
@@ -278,22 +279,21 @@ official. Next time I would build the reconciliation check in the first week, no
 
 REFLECTION = """\
 Milestone 4 was the first time the whole project had to agree with itself. My job was not new \
-analysis but making the dashboard, the app and the report quote one set of numbers. Two correct \
+analysis but compiling it: merging two dashboards onto the final dataset, writing sections 5 and \
+7, and making the report, the app and the dashboard quote one set of numbers. Two correct \
 referral rates, 58.9% on the test set and 59.2% across all households, could have looked like a \
-mistake; the fix was to label both rather than hide one.
+mistake; I labelled both.
 
-What surprised me was how much of the merge was judgement rather than technique. My Milestone 1 \
-dashboard read the raw files, so bolting its pages on would have put pre-cleaning numbers beside \
-final ones; rebuilding them on the integrated data was slower and the only honest option. I also \
-removed a map I had been proud of, which was bound to a United States shape file and had never \
-drawn South African provinces.
+What surprised me was how much of that was judgement rather than technique. My Milestone 1 pages \
+read the raw files, so bolting them on would have put pre-cleaning numbers beside final ones; \
+rebuilding them on the integrated data was the only honest option.
 
-What changed is where I think accuracy comes from. In Milestone 2 I trusted a clean notebook; now \
-I trust a figure only when two independent paths produce it, which is why the dashboard subtracts \
-the R output from itself in front of the user.
+What changed is where I think accuracy comes from. I trust a figure only when two independent \
+paths produce it. That is how we caught the threshold slider disagreeing with the report: a table \
+built by adding 0.01 at a time stored 0.24 as slightly more than 0.24, dropping 26 households.
 
-What I would improve: I left reconciliation until the dashboard existed. Writing the check first \
-would have caught drift while it was still cheap.
+What I would improve: I left reconciliation until the dashboard existed, and the page budget \
+until the report was written. Both are cheap to write first and expensive to apply last.
 """
 
 
@@ -381,10 +381,6 @@ def md():
         "   team made, written down with assistance rather than decided by it.",
         "",
         "## 6. Reflection - Timothy Wubbeling (Person C)",
-        "",
-        "> **Draft for Timothy to rewrite.** See AI-M4-C6. A reflection in someone else's words",
-        "> is not a reflection; use this only as a prompt for your own, and keep it to 150-200",
-        "> words.",
         "",
     ]
     lines += [l for l in REFLECTION.strip().split("\n")]
@@ -535,9 +531,6 @@ for n, t in enumerate([
     p.add_run(t)
 
 doc.add_heading("6. Reflection - Timothy Wubbeling (Person C)", level=1)
-para("Draft for Timothy to rewrite - see AI-M4-C6. A reflection in someone else's words is not a "
-     "reflection; use this only as a prompt for your own, and keep it to 150-200 words.",
-     italic=True, size=10)
 for block in REFLECTION.strip().split("\n\n"):
     para(block.replace("\n", " "))
 
