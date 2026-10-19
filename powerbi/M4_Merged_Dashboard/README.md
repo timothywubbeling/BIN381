@@ -211,8 +211,15 @@ Then type 0.14, 0.30 and 0.50 into the slicer box:
 | 0.30 | 67.8% | 47.3% | 43.8% | 438 |
 | 0.50 | 31.1% | 62.4% | 15.2% | 152 |
 
-Cards are set to display units "None" as well, so the Overview household count reads 20,925 and
-not 21K.
+**Verified on screen** (Power BI Desktop 2.159.883.0, 19 October 2026): all four rows above read
+exactly as tabulated, both rows of cards agree at 0.24, and the slicer accepts values below 0.24.
+
+> **Still open: the Overview household count renders as "21K", not 20,925.** The card carries
+> `value.displayUnits = 1` ("None"), but the new `cardVisual` ignores it: its Format pane has no
+> display-units control for the callout value (searching the pane for "units" finds only the
+> category header), and the measure's `#,0` format string does not stop the abbreviation either.
+> Either switch that one card to the classic `card` visual, which does expose
+> `labels.labelDisplayUnits`, or leave it — every exact count is on the Reconciliation page.
 
 ---
 
