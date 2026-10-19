@@ -175,7 +175,15 @@ AI = [
      "instead of the project, with no explanatory error, and wrote that up as a known issue with "
      "the advice to clone somewhere short."),
     ("AI-M4-A1", TODO, TODO, TODO, TODO),
-    ("AI-M4-B1", TODO, TODO, TODO, TODO),
+    # Not "AI-M4-B1": those ids are Rudi's own, in Appendix A of the report, so reusing one
+    # here for a summary row made the same id mean two different things.
+    ("AI-M4-B1 to B9", "17 Oct 2026\nRudi (B)\nClaude (Anthropic)",
+     "Dashboard pages, report sections 4, 6 and 8, slides 5 to 7, and the check that every "
+     "evaluation figure quoted in a deliverable reconciles with data/evaluation/. Each use is "
+     "recorded separately in Appendix A of the report.",
+     "See Appendix A: every entry names what was checked and against which file.",
+     "Listed here so this log covers the whole group; Appendix A carries the detail and is "
+     "Rudi's to sign off."),
 ]
 
 REFLECTION = """\
