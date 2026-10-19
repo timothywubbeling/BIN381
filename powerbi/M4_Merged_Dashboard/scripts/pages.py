@@ -26,8 +26,9 @@ TH = "Threshold"
 def card(seed, x, y, w, h, entity, name, title, subtitle=None, size=22):
     objects = {
         "label": [{"properties": {"show": boo(False)}, "selector": {"id": "default"}}],
+        # displayUnits 1 = None. Auto abbreviates 20,925 to "21K" on the overview card.
         "value": [{"properties": {"fontSize": num(size), "bold": boo(True),
-                                  "fontColor": solid(FG)},
+                                  "fontColor": solid(FG), "displayUnits": num(1)},
                    "selector": {"id": "default"}}],
     }
     return visual(seed, "cardVisual", x, y, w, h,
@@ -64,9 +65,11 @@ def list_slicer(seed, x, y, w, h, entity, prop, title):
 
 def threshold_slicer(seed, x, y, w, h):
     """Numeric what-if slider, defaulted to the deployed 0.24 (as in Rudi's file)."""
-    default = "0.24000000000000007D"
+    # Exact, and no numericStart: that was saved as the drifted 0.24 and became the
+    # start of the slider's range, so it could not be dragged below the deployed value.
+    default = "0.24D"
     objects = {
-        "data": [{"properties": {"numericStart": lit(default), "mode": s("Single")}}],
+        "data": [{"properties": {"mode": s("Single")}}],
         "general": [{"properties": {"filter": {"filter": {
             "Version": 2,
             "From": [{"Name": "t", "Entity": TH, "Type": 0}],

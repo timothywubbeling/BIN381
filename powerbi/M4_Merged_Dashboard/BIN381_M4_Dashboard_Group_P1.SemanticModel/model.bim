@@ -1766,12 +1766,12 @@
             "name": "Threshold",
             "dataType": "double",
             "type": "calculatedTableColumn",
-            "sourceColumn": "[Value]",
+            "sourceColumn": "[Threshold]",
             "isNameInferred": false,
             "isDataTypeInferred": true,
             "summarizeBy": "none",
             "formatString": "0.00",
-            "description": "GENERATESERIES accumulates 0.01 at a time, so the stored values drift: the step shown as 0.24 is really 0.24000000000000007. Filter or compare with a range (> 0.239 && < 0.241), never = 0.24, which silently matches no rows. The slicer default literal on the performance page already uses the drifted value.",
+            "description": "The referral threshold a decision-maker can try, in steps of 0.01. Built from whole numbers divided by 100 so each value is exactly the number Power BI produces when it is typed into the slicer: GENERATESERIES(0, 1, 0.01) accumulates 0.01 at a time and stores 0.24 as 0.24000000000000007, which drops the 26 test households scoring exactly 0.2400 and makes the what-if cards disagree with the fixed ones.",
             "lineageTag": "32cd3962-57a7-ee09-5fef-731713cdd996",
             "annotations": [
               {
@@ -1787,17 +1787,17 @@
             "mode": "import",
             "source": {
               "type": "calculated",
-              "expression": "GENERATESERIES(0, 1, 0.01)"
+              "expression": "SELECTCOLUMNS(GENERATESERIES(0, 100, 1), \"Threshold\", [Value] / 100)"
             }
           }
         ],
         "measures": [
           {
             "name": "Threshold Value",
-            "expression": "SELECTEDVALUE(Threshold[Threshold], 0.24)",
+            "expression": "ROUND(SELECTEDVALUE(Threshold[Threshold], 0.24), 2)",
             "lineageTag": "1a00381d-6955-151e-03b9-7c4c515fba95",
             "formatString": "0.00",
-            "description": "The threshold currently chosen on the slicer; 0.24 when nothing is selected."
+            "description": "The threshold currently chosen on the slicer; 0.24 when nothing is selected. Rounded as a safety net, so a typed value that arrives with a floating-point tail still matches a row."
           }
         ]
       }

@@ -9,7 +9,7 @@ EVALUATE ROW(
 --------
 // FINAL - slicer default literal still matches exactly one row
 EVALUATE ROW("rows matching slicer default",
-  COUNTROWS(FILTER('Threshold', 'Threshold'[Threshold] = 0.24000000000000007)))
+  COUNTROWS(FILTER('Threshold', ROUND('Threshold'[Threshold], 2) = 0.24)))
 --------
 // FINAL - province reconciliation, all nine must read 0.0 / Reconciled
 EVALUATE

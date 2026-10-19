@@ -187,12 +187,32 @@ It replaces the `.Report` and `.SemanticModel` folders only; this README and `sc
 alone. Once anyone starts editing in the Power BI UI the generator stops being the source of truth —
 say so in the commit message when that happens.
 
-### Known quirk
+### Fixed: the what-if threshold is exact
 
-`Threshold[Threshold]` values drift. `GENERATESERIES(0, 1, 0.01)` accumulates, so the step shown as
-0.24 is stored as `0.24000000000000007` and the table tops out at 0.99. Filter with a range
-(`> 0.239 && < 0.241`), never `= 0.24`, which silently matches nothing. The slicer default already
-uses the drifted literal, as Person B's file did.
+`GENERATESERIES(0, 1, 0.01)` accumulates 0.01 at a time, so the step shown as 0.24 was stored as
+`0.24000000000000007`. That is slightly more than 0.24, so the 26 test households scoring exactly
+0.2400 — seven of them at risk — fell outside `ModelProbability >= T`: the what-if cards read
+80.4% / 42.0% / 585 while the fixed cards above them read 80.7% / 41.9% / 589. A typed 0.30 matched
+no row at all, `SELECTEDVALUE` fell back to its default, and the cards appeared not to move. The
+slicer's saved `numericStart` held the same drifted value, which made 0.24 the bottom of its range.
+
+The table is now built from whole numbers,
+`SELECTCOLUMNS(GENERATESERIES(0, 100, 1), "Threshold", [Value] / 100)`, so each value is exactly
+the number Power BI produces when it is typed; `Threshold Value` rounds to two decimals as a safety
+net; and `numericStart` is gone, so the slider runs from 0 again.
+
+**Check after opening:** at 0.24 both rows of cards read 80.7% / 41.9% / 58.9% (589 per 1,000).
+Then type 0.14, 0.30 and 0.50 into the slicer box:
+
+| Threshold | Recall | Precision | Referred | Per 1,000 |
+|---|---|---|---|---|
+| 0.14 | 95.9% | 35.0% | 83.8% | 838 |
+| 0.24 | 80.7% | 41.9% | 58.9% | 589 |
+| 0.30 | 67.8% | 47.3% | 43.8% | 438 |
+| 0.50 | 31.1% | 62.4% | 15.2% | 152 |
+
+Cards are set to display units "None" as well, so the Overview household count reads 20,925 and
+not 21K.
 
 ---
 

@@ -38,13 +38,6 @@
       "data": [
         {
           "properties": {
-            "numericStart": {
-              "expr": {
-                "Literal": {
-                  "Value": "0.24000000000000007D"
-                }
-              }
-            },
             "mode": {
               "expr": {
                 "Literal": {
@@ -85,7 +78,7 @@
                         },
                         "Right": {
                           "Literal": {
-                            "Value": "0.24000000000000007D"
+                            "Value": "0.24D"
                           }
                         }
                       }

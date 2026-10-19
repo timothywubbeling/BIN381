@@ -516,22 +516,21 @@ threshold = {
                     "'How well does the screening tool work?' page. Deployed value 0.24."),
     "lineageTag": lt("t/" + TH),
     "columns": [
-        # isNameInferred must stay false: GENERATESERIES names its column [Value],
-        # and the what-if measures and the slicer both reference Threshold[Threshold].
+        # isNameInferred must stay false: the what-if measures and the slicer both
+        # reference Threshold[Threshold].
         {"name": "Threshold", "dataType": "double", "type": "calculatedTableColumn",
-         "sourceColumn": "[Value]", "isNameInferred": False, "isDataTypeInferred": True,
+         "sourceColumn": "[Threshold]", "isNameInferred": False, "isDataTypeInferred": True,
          "summarizeBy": "none", "formatString": "0.00",
-         "description": "GENERATESERIES accumulates 0.01 at a time, so the stored values "
-                        "drift: the step shown as 0.24 is really 0.24000000000000007. Filter "
-                        "or compare with a range (> 0.239 && < 0.241), never = 0.24, which "
-                        "silently matches no rows. The slicer default literal on the "
-                        "performance page already uses the drifted value.",
+         "description": 'The referral threshold a decision-maker can try, in steps of 0.01. Built from whole numbers divided by 100 so each value is exactly the number Power BI produces when it is typed into the slicer: GENERATESERIES(0, 1, 0.01) accumulates 0.01 at a time and stores 0.24 as 0.24000000000000007, which drops the 26 test households scoring exactly 0.2400 and makes the what-if cards disagree with the fixed ones.',
          "lineageTag": lt(TH + "/Threshold"), "annotations": list(ANN)},
     ],
-    "partitions": calc_partition(TH, "GENERATESERIES(0, 1, 0.01)"),
+    "partitions": calc_partition(TH, 'SELECTCOLUMNS(GENERATESERIES(0, 100, 1), "Threshold", [Value] / 100)'),
     "measures": [
-        measure(TH, "Threshold Value", "SELECTEDVALUE(%s[Threshold], 0.24)" % TH, "0.00",
-                "The threshold currently chosen on the slicer; 0.24 when nothing is selected."),
+        measure(TH, "Threshold Value",
+                "ROUND(SELECTEDVALUE(%s[Threshold], 0.24), 2)" % TH, "0.00",
+                "The threshold currently chosen on the slicer; 0.24 when nothing is "
+                "selected. Rounded as a safety net, so a typed value that arrives with a "
+                "floating-point tail still matches a row."),
     ],
 }
 
