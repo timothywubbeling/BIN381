@@ -123,6 +123,12 @@ targets = [
     os.path.join(ROOT, "report", "M4", "BIN381_M4_PersonB_Sections_4_6_8.docx"),
     os.path.join(ROOT, "report", "M4", "BIN381_M4_PersonB_Slides_5_to_7.md"),
     os.path.join(ROOT, "docs", "powerbi_m4_person_b_pages.md"),
+    # The things that are actually submitted, so a figure cannot drift in the
+    # assembled report or on a slide without this failing.
+    os.path.join(ROOT, "report", "M4", "BIN381_M4_Report_Group_P1.docx"),
+    os.path.join(ROOT, "report", "M4", "BIN381_M4_PersonC_Sections_5_7.docx"),
+    os.path.join(ROOT, "report", "M4", "BIN381_M4_PersonC_Slides_8_to_10.md"),
+    os.path.join(ROOT, "report", "M4", "BIN381_M4_Slides_Group_P1.pptx"),
 ]
 
 
@@ -136,6 +142,22 @@ def text_of(path):
         d = Document(path)
         parts = [p.text for p in d.paragraphs]
         parts += [c.text for t in d.tables for r in t.rows for c in r.cells]
+        return "\n".join(parts)
+    if path.endswith(".pptx"):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            notes.append("python-pptx not installed; skipped the .pptx scan")
+            return ""
+        parts = []
+        for slide in Presentation(path).slides:
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    parts.append(shape.text_frame.text)
+                if shape.has_table:
+                    parts += [c.text for r in shape.table.rows for c in r.cells]
+            if slide.has_notes_slide:
+                parts.append(slide.notes_slide.notes_text_frame.text)
         return "\n".join(parts)
     with open(path, encoding="utf-8") as fh:
         return fh.read()
@@ -162,7 +184,11 @@ for name, body in corpus.items():
         if "59.2" in sentence and "test" in sentence.lower() and "all" not in sentence.lower():
             problems.append(f"{name}: 59.2% described as a test-set figure — that is the "
                             f"all-household rate (58.9% is the test set)")
-        if re.search(r"\b28\.3\s*%", sentence) and "test" in sentence.lower():
+        m = re.search(r"\b28\.3\s*%", sentence)
+        # A sentence that lists several figures can mention the test set for a different
+        # one, so only flag 28.3% when it is not labelled correctly where it appears.
+        if m and "test" in sentence.lower() and not re.search(
+                r"weighted|all household", sentence[m.start():m.end() + 30], re.I):
             problems.append(f"{name}: 28.3% described as a test-set figure — that is the "
                             f"all-household weighted rate (28.8% is the test set)")
         if re.search(r"accuracy of \d", sentence, re.I):
