@@ -82,8 +82,22 @@ ETHICS = [
      "file access, so the file behaves the same for every member; the build now decodes each "
      "payload back out and fails rather than ship one that does not round-trip",
      "C"),
-    ("E4-11", TODO, "Modelling / data", TODO, TODO, "A"),
-    ("E4-12", TODO, "Evaluation", TODO, TODO, "B"),
+    ("E4-11", "19 Oct", "Modelling / data",
+     "\"Don't know\" and \"refused\" answers to the eight food-insecurity questions could "
+     "have been counted as \"no\", which would label unsure households as food secure. The "
+     "model could also have learned from the same questions it was meant to predict.",
+     "Those answers were recoded to missing. The 15 households with no valid answer were set "
+     "aside before the split. Sixteen columns that define or closely proxy the target were "
+     "kept out of the predictors, with a check that stops the notebook if one appears.", "A"),
+    ("E4-12", "19 Oct", "Evaluation",
+     "One headline recall would have hidden that the screen performs far worse for some "
+     "groups than others, and the obvious patch - a lower threshold for higher-income "
+     "households - would mean treating households differently by income on the basis of a "
+     "proxy.",
+     "Equal opportunity was chosen as the fairness criterion and recall is measured per "
+     "subgroup. The gaps are published in section 4 and on the dashboard rather than patched: "
+     "39.2% recall above R11,500 and 61.7% with no grant recipients. Recommendation 5 asks "
+     "for a monthly audit of lower-risk households in exactly those groups instead.", "B"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -174,7 +188,37 @@ AI = [
      "Accepted. Claude also found that a long folder path makes Power BI open a blank document "
      "instead of the project, with no explanatory error, and wrote that up as a known issue with "
      "the advice to clone somewhere short."),
-    ("AI-M4-A1", TODO, TODO, TODO, TODO),
+    ("AI-M4-A1", "14 Oct 2026\nAlexander (A)\nClaude (Anthropic)",
+     "Milestone 4 team guideline. Claude read the Milestone 4 brief and the repository and "
+     "produced a Word guideline: deliverables, a proposed A/B/C split, a plan for each task, "
+     "the marks map, a timeline and likely defence questions.",
+     "Deliverables and rubric compared line by line with the brief. Statements about what was "
+     "already in the repository were checked against the cloned repository.",
+     "Used as a planning aid. The split was a proposal, and the group agreed on its own."),
+    ("AI-M4-A2", "14 Oct 2026\nAlexander (A)\nClaude (Anthropic)",
+     "Reviewed sections 1 to 3 and gave advice on talking points for slides 1 to 4.",
+     "Looked through the previous milestones as well as the rubric and gave talking points.",
+     "I looked through the review and made changes to it as well as created the slides by "
+     "myself. I am responsible for every sentence."),
+    ("AI-M4-A3", "19 Oct 2026\nAlexander (A)\nClaude (Anthropic)",
+     "Four figures: a CRISP-DM diagram, a data-flow diagram from the cleaned files to the "
+     "train/test split, a chart of the three food-insecurity tiers, and a chart of "
+     "cross-validated ROC-AUC for the four models. Claude wrote the plotting script.",
+     "Every value in the figures was compared with Table 1.5 of the Milestone 3 report and "
+     "the model parameter table. Each image was viewed for errors and overlaps.",
+     "Figures 1 and 2 are in the report. The tier chart was left out for space."),
+    ("AI-M4-A4", "19 Oct 2026\nAlexander (A)\nClaude (Anthropic)",
+     "Document tidy-up. Claude added the student numbers to the cover, the table and figure "
+     "captions, converted the reference list to Harvard style, fixed two typos and widened a "
+     "table column in my Word file.",
+     "Cover details checked against our student numbers. Harvard references checked against "
+     "the original sources' details.",
+     "Accepted. I will check the compiled report for consistent referencing with Timothy."),
+    ("AI-M4-A5", "19 Oct 2026\nAlexander (A)\nClaude (Anthropic)",
+     "Helped with reviewing my personal reflection and gave improvements.",
+     "Not applicable: a reflection cannot be checked against data.",
+     "A reflection that I did not write would not be my reflection, and this entry records "
+     "that Claude did help with improvement."),
     # Not "AI-M4-B1": those ids are Rudi's own, in Appendix A of the report, so reusing one
     # here for a summary row made the same id mean two different things.
     ("AI-M4-B1 to B9", "17 Oct 2026\nRudi (B)\nClaude (Anthropic)",
@@ -185,6 +229,25 @@ AI = [
      "Listed here so this log covers the whole group; Appendix A carries the detail and is "
      "Rudi's to sign off."),
 ]
+
+REFLECTION_A = """\
+What worked best for this project is that we split it into 3, so each person did a specific \
+section of each milestone. Because I built the modelling and then wrote about it, I could \
+explain every choice. Writing down in Milestone 2 that we would fall back to a binary target \
+if the middle tier couldn't be separated also paid off. When the three-tier models failed to \
+find that tier, we switched without scrambling.
+
+The biggest surprise was how much went wrong in such small, practical places. My leakage \
+checks failed because I assumed the integrated file was already trimmed, when it still had \
+128 columns. Later, I ran renv::init() in the wrong project folder and had to redo it. Across \
+the milestones, the target and the final model changed more than I expected, and the project \
+grew from an analysis into a tool with monitoring.
+
+I learned how tidymodels recipes keep preprocessing inside each cross-validation fold, and \
+how to work with Git and GitHub as a team. Next time, I would agree on the model's output \
+format with whoever builds the app much earlier, because the three-tier vs binary mismatch \
+cost us time, and I would set up renv on the first day.
+"""
 
 REFLECTION = """\
 Milestone 4 was the first time the whole project had to agree with itself. My job was not new \
@@ -300,7 +363,13 @@ def md():
         "",
     ]
     lines += [l for l in REFLECTION.strip().split("\n")]
-    lines += ["", f"_Word count of the draft above: {len(REFLECTION.split())} words._", ""]
+    lines += ["", f"_Word count of the draft above: {len(REFLECTION.split())} words._", "",
+              "## 7. Reflection - Alexander Solomon (Person A)", ""]
+    lines += [l for l in REFLECTION_A.strip().split("\n")]
+    lines += ["", "## 8. Reflection - Rudi Jan du Plessis (Person B)", "",
+              "> `TO CONFIRM` - 150 to 200 words on what worked, what surprised him, what",
+              "> changed across the milestones, what he learned and what he would improve.",
+              ""]
     return "\n".join(lines)
 
 
@@ -446,11 +515,13 @@ para("Draft for Timothy to rewrite - see AI-M4-C6. A reflection in someone else'
 for block in REFLECTION.strip().split("\n\n"):
     para(block.replace("\n", " "))
 
-doc.add_heading("7. Reflections - Alexander Solomon (Person A) and Rudi Jan du Plessis (Person B)",
-                level=1)
-para("TO CONFIRM - each member writes 150 to 200 words on what worked, what surprised them, what "
-     "changed across the milestones, what they learned and what they would improve, merged under "
-     "their own name.", italic=True)
+doc.add_heading("7. Reflection - Alexander Solomon (Person A)", level=1)
+for block in REFLECTION_A.strip().split("\n\n"):
+    para(block.replace("\n", " "))
+
+doc.add_heading("8. Reflection - Rudi Jan du Plessis (Person B)", level=1)
+para("TO CONFIRM - 150 to 200 words on what worked, what surprised him, what changed across "
+     "the milestones, what he learned and what he would improve.", italic=True)
 
 doc.save(OUT_DOCX)
 print("wrote", OUT_DOCX)
