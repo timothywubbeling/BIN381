@@ -88,7 +88,7 @@ drift from the notebooks. The build scripts are Python and need `python-docx`
 
 | Deliverable | File | Rebuild with |
 |---|---|---|
-| Final report | `report/M4/BIN381_M4_Report_Group_P1.docx` | `python report/M4/merge_final_report.py` (merges Alexander's sections 1–4, 6, 8 with Timothy's 5 and 7 and appends the ethics log). Export the PDF from Word, which also rebuilds the contents page |
+| Final report | `report/M4/BIN381_M4_Report_Group_P1.docx`, and `.pdf` beside it | `python report/M4/merge_final_report.py` (merges Alexander's sections 1–4, 6, 8 with Timothy's 5 and 7, puts the dashboard figure into §5 and appends the ethics log), then `report\M4\export_pdf.ps1` from a PowerShell window — it rebuilds the contents page, exports the PDF and fails if the main content passes 10 pages. A4, 2 cm margins: 10 pages of main content, 20 in total |
 | Ethics report and AI log | `report/M4/BIN381_M4_Ethics_and_AI_Usage_Log.docx` (and `.md`) | `python report/M4/build_ethics_and_ai_log.py` |
 | Report sections | `report/M4/BIN381_M4_PersonB_Sections_4_6_8.docx`, `..._PersonC_Sections_5_7.docx` | `python report/M4/build_personB_sections.py`, `build_personC_sections.py` |
 | Every quoted figure | — | `python report/M4/check_numbers.py` — exits non-zero if any deliverable stops reconciling with `data/evaluation/` |

@@ -22,12 +22,15 @@ FIGURES = os.path.join(ROOT, "docs", "figures")
 BASE = os.path.join(HERE, "BIN381_M4_PersonA_Slides_1_4.pptx")
 OUT = os.path.join(HERE, "BIN381_M4_Slides_Group_P1.pptx")
 
-# Alexander's deck: Century Gothic theme, Aptos on the runs, warm accents. Matched here so
-# the three new slides do not read as a different deck.
+# Alexander's deck: Century Gothic theme, Aptos on the runs, and a dark textured background
+# from the template, so slide text is white. Tables and screenshots sit on light cards, the
+# way his charts do.
 FONT = "Aptos"
-INK = RGBColor(0x36, 0x3D, 0x46)       # dk2
-MUTED = RGBColor(0x6F, 0x6F, 0x6F)     # accent1
-WARN = RGBColor(0xCF, 0x71, 0x33)      # accent6, used for the gaps we are honest about
+INK = RGBColor(0xFF, 0xFF, 0xFF)       # text on the dark slide
+MUTED = RGBColor(0xD9, 0xD9, 0xD9)     # footnotes, still legible on the texture
+WARN = RGBColor(0xE9, 0xA0, 0x39)      # accent5: the gaps we are honest about
+CARD = RGBColor(0xFF, 0xFF, 0xFF)      # table body, like the white card behind his charts
+CARD_INK = RGBColor(0x36, 0x3D, 0x46)  # dk2, text on that card
 TINT = RGBColor(0xEB, 0xEB, 0xEB)      # lt2, table header fill
 
 MARGIN = Inches(1.25)
@@ -111,13 +114,13 @@ def table(s, rows, x, y, w, col_w, size=11, row_h=Inches(0.42), emphasise=()):
             cell.margin_left = cell.margin_right = Inches(0.08)
             cell.margin_top = cell.margin_bottom = Inches(0.03)
             cell.fill.solid()
-            cell.fill.fore_color.rgb = TINT if r == 0 else RGBColor(0xFF, 0xFF, 0xFF)
+            cell.fill.fore_color.rgb = TINT if r == 0 else CARD
             run = cell.text_frame.paragraphs[0].add_run()
             run.text = str(val)
             run.font.size = Pt(size)
             run.font.name = FONT
             run.font.bold = r == 0 or (r, c) in emphasise
-            run.font.color.rgb = WARN if (r, c) in emphasise else INK
+            run.font.color.rgb = RGBColor(0xB8, 0x5A, 0x1E) if (r, c) in emphasise else CARD_INK
     return t
 
 
@@ -202,7 +205,7 @@ rows = [["Action", "The number behind it", "Who acts"],
 table(s, rows, MARGIN, BODY_Y, BODY_W,
       [Inches(3.6), Inches(4.8), Inches(2.43)], row_h=Inches(0.64))
 tx(s, [("A screening aid. An official reviews every referral, and a low score is never clearance.",
-        {"size": 14, "bold": True, "color": WARN})], MARGIN, Inches(6.15), BODY_W, Inches(0.4))
+        {"size": 14, "bold": True, "color": WARN})], MARGIN, FOOT_Y, BODY_W, Inches(0.4))
 notes(s, """
 Each of these starts from a number on Rudi's slides, and each has a limit attached, because the
 limits are what make them safe to act on.
@@ -237,17 +240,17 @@ tx(s, [("Moderate discrimination: ROC-AUC 0.736", {"bold": True}),
        ("A proxy target from eight self-reported items, on one cross-sectional wave - "
         "association, never cause", {}),
        ("No external validation, and recall is weakest where risk is least expected", {})],
-   MARGIN, Inches(2.75), Inches(5.2), Inches(3.2), size=13, space_after=14)
+   MARGIN, Inches(2.75), Inches(5.2), Inches(2.8), size=13, space_after=14)
 tx(s, "What we would do next", Inches(6.88), BODY_Y, Inches(5.2), Inches(0.35),
    size=16, bold=True)
 tx(s, [("Capture follow-up outcomes, so the next model trains on what was found", {"bold": True}),
        ("Add a second survey wave for within-household change", {}),
        ("Bring in per-person income, employment, debt and local food prices", {}),
        ("Re-validate on a new release before extending the threshold to it", {})],
-   Inches(6.88), Inches(2.75), Inches(5.2), Inches(3.2), size=13, space_after=14)
+   Inches(6.88), Inches(2.75), Inches(5.2), Inches(2.8), size=13, space_after=14)
 tx(s, [("A cheap, interpretable, monitored triage aid that finds four in five at-risk households "
         "and knows which ones it misses.", {"size": 16, "bold": True})],
-   MARGIN, Inches(5.95), BODY_W, Inches(0.45))
+   MARGIN, Inches(5.7), BODY_W, Inches(0.6))
 notes(s, """
 We would rather say these ourselves than have them found.
 

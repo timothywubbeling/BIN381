@@ -173,7 +173,7 @@ placeholder = anchor(base, "[Figures")
 shots = list(available())
 substitutes = [os.path.basename(p) for p, _, sub in shots if sub]
 if shots:
-    width = Cm(15.5 / len(shots))
+    width = Cm(12.0) if len(shots) == 1 else Cm(7.5)
     holder = base.add_paragraph()                      # built at the end, then moved into place
     holder.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for i, (path, _, _) in enumerate(shots):
@@ -236,6 +236,15 @@ for el in body:
             for attr in ("w:ascii", "w:hAnsi", "w:eastAsia", "w:cs"):
                 rFonts.set(qn(attr), "Calibri")
             fonts += 1
+
+# --- A4, and a page the content actually fits on -----------------------------------------
+# The document came off a US Letter template (21.6 x 27.9 cm) with 2.54 cm margins. A4 is
+# what this is printed on, and it is 1.8 cm taller; at 2 cm margins the main content fits
+# the brief's ten pages without cutting anything or touching the 11pt / 1.15 spacing.
+for section in base.sections:
+    section.page_width, section.page_height = Cm(21.0), Cm(29.7)
+    section.left_margin = section.right_margin = Cm(2.0)
+    section.top_margin = section.bottom_margin = Cm(2.0)
 
 # --- Make Word rebuild the table of contents on open -------------------------------------
 toc = next(el for el in body if any("TOC" in (i.text or "") for i in el.iter(qn("w:instrText"))))
