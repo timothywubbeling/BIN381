@@ -24,11 +24,25 @@ every figure against R and saves the final file.
 | Measures | All six, verified against the evaluation outputs (see §6) |
 | Label columns | `Driver`, `Factor`, `Direction` — all added |
 | Import locale | Set to **English (United States)** |
-| Page 1 | "How well does the screening tool work?" — threshold slicer plus the four metric cards |
+| Pages | **All built (17 Oct):** Overview (decision questions + headline cards), "How well does the screening tool work?", "Which households does the screen miss?", "What should we ask about to spot risk early?" — title bar, page navigator and source footnote on every page |
+| Extra measures | `Deployed recall / precision / share referred / ROC-AUC` (on `powerbi_model_summary`, for the fixed cards), `Households`, `Households in sample`, `At-risk share (weighted)` |
+| Extra columns | `Score band` (0.04 bands), `Outcome`, `Income vs a year ago` on `powerbi_households` |
+| Screenshots | `docs/figures/pbi_b1_performance.png`, `pbi_b2_subgroups.png`, `pbi_b3_drivers.png` |
 
-Sections 2 and 3 below are **done**; they are kept as a record of what was set up and why. Start at
-§4. The remaining work is the two further pages, the what-if panel and score distribution on page 1,
-and the reconciliation checks in §6.
+Sections 2 to 5 below are **done**; they are kept as a record of what was set up and why. Every
+number in §6 was checked in the file on 17 Oct (cards, what-if at 0.14 / 0.22 / 0.24 / 0.30 / 0.50,
+subgroup recalls, top driver). Alexander's two pages ("Where the need is", "Who is affected") are
+still to add; the page navigator picks them up automatically.
+
+### Threshold rounding fix
+
+`Threshold Value` is now `ROUND(SELECTEDVALUE('Threshold'[Threshold], 0.24), 2)`. `GENERATESERIES`
+stores 0.24 as 0.24000000000000002, so with the slider *on* 0.24 the old measure dropped households
+scored exactly 0.2400 and showed 80.4% / 42.0% / 585 instead of 80.7% / 41.9% / 589. Do not
+revert it.
+
+The score-distribution chart uses 0.04 bands instead of the 0.05 in §5, so 0.24 falls on a band
+edge and "bands from 0.24 upward are referred" is exactly true.
 
 ### The one trap worth knowing
 
@@ -134,10 +148,10 @@ with the question it answers. Person B owns 3, 4, 5 and 6.
 |---|---|---|---|
 | 1 | Where are food-insecure households concentrated? | Where the need is | A |
 | 2 | Which kinds of household are most affected? | Who is affected | A |
-| 3 | Can we trust the screening tool enough to act on it? | How well the screen works | **B** |
-| 4 | Which households does the screen miss, and where? | Who the screen misses | **B** |
-| 5 | What should we ask about to spot risk early? | What drives risk | **B** |
-| 6 | How many households would a given threshold send for follow-up? | How well the screen works | **B** |
+| 3 | Can we trust the screening tool enough to act on it? | How well does the screening tool work? | **B** |
+| 4 | Which households does the screen miss, and where? | Which households does the screen miss? | **B** |
+| 5 | What should we ask about to spot risk early? | What should we ask about to spot risk early? | **B** |
+| 6 | How many households would a given threshold send for follow-up? | How well does the screening tool work? | **B** |
 
 ---
 
