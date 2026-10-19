@@ -1,0 +1,172 @@
+---
+title: "BIN381 Milestone 4 - The project by CRISP-DM phase"
+author: "Group P1: Alexander Solomon (Person A), Rudi Jan du Plessis (Person B), Timothy Wubbeling (Person C)"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+This notebook is the map, not the analysis. The work was written one milestone at a time; the brief
+asks for it organised by CRISP-DM phase, so each section below names the decision that phase settled
+and points at the notebook, script or file that carries it. Nothing here re-runs or rewrites that
+code: to reproduce a phase, knit the notebook it names. `notebook/BIN 381 Milestone 3 - Full
+Notebook (Group P1).Rmd` runs modelling, evaluation and deployment end to end in one pass, and the
+`README.md` has the clean-clone order for everything else.
+
+Knitting this file checks that every artifact named below is actually in the repository.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+root <- normalizePath(if (basename(getwd()) == "notebook") ".." else ".")
+
+# One row per artifact. The table under each section is drawn from this, so a file that is
+# renamed or lost shows up as MISSING when this notebook is knitted.
+artifacts <- function(...) {
+  a <- rbind(...)
+  a <- data.frame(Phase = a[, 1], Artifact = a[, 2], Holds = a[, 3], stringsAsFactors = FALSE)
+  a$Present <- ifelse(file.exists(file.path(root, a$Artifact)), "yes", "MISSING")
+  a
+}
+
+MAP <- artifacts(
+  c("Business understanding", "report/M4/BIN381_M4_Report_Group_P1.docx",
+    "Section 1: the problem, the stakeholder, BO1-BO3 and H1-H6"),
+  c("Business understanding", "report/M4/BIN381_M4_Handover_and_Maintenance.md",
+    "Who owns what, known issues, retirement triggers"),
+  c("Data understanding", "notebook/M1_EDA.Rmd",
+    "Milestone 1 exploration of all 11 GHS files"),
+  c("Data understanding", "data/integrated/BIN381_M2_Data_Dictionary.csv",
+    "Every column, its source file and its treatment"),
+  c("Data understanding", "data/integrated/BIN381_M2_Excluded_Variables.csv",
+    "What was left out of the dataset, and why"),
+  c("Data preparation", "notebook/BIN 381 Milestone 2 Person C - Data Selection and Cleaning.Rmd",
+    "Seven household files kept, IDs read as text, sentinels to missing"),
+  c("Data preparation",
+    "notebook/BIN 381 Milestone 2 Person B - Integration, Construction and Data Dictionary.Rmd",
+    "Guarded one-to-one joins, 15 placeholder keys repaired"),
+  c("Data preparation", "notebook/BIN 381 Milestone 2 Person A - Prepare for Modelling.Rmd",
+    "FI Score target, eight predictors, the leakage exclusions, the 70/30 split"),
+  c("Data preparation", "data/clean/qa_log_personC.csv", "Every cleaning treatment, by column"),
+  c("Data preparation", "data/integrated/M2_final_modelling_dataset.rds",
+    "20,925 modelled households"),
+  c("Modelling", "notebook/BIN 381 Milestone 3 Person A - Modelling Strategy and Implementation.Rmd",
+    "Three candidates tuned with stratified 5-fold CV, seed 381"),
+  c("Modelling", "data/modelling/model_parameter_table.csv", "The settings each model was tuned to"),
+  c("Modelling", "data/modelling/final_workflow_binary.rds",
+    "The deployed lasso logistic workflow"),
+  c("Evaluation", "notebook/BIN 381 Milestone 3 Person B - Evaluation and Interpretation.Rmd",
+    "Test-set scoring, the 0.24 threshold, calibration, subgroups, H1-H6"),
+  c("Evaluation", "data/evaluation/evaluation_matrix.csv", "Every headline metric quoted in the report"),
+  c("Evaluation", "data/evaluation/subgroup_performance.csv", "Where the screen is weakest"),
+  c("Evaluation", "report/M4/check_numbers.py",
+    "Re-asserts the quoted figures against data/evaluation/"),
+  c("Deployment", "notebook/BIN 381 Milestone 3 Person C - Deployment, Monitoring and Ethics.Rmd",
+    "The app serves the evaluated workflow; fairness and monitoring evidence"),
+  c("Deployment", "app/app.R", "The Shiny screening tool"),
+  c("Deployment", "R/check_app_matches_model.R", "App output equals the model on every scored test row"),
+  c("Deployment", "powerbi/M4_Merged_Dashboard/README.md",
+    "The nine-page dashboard: how to open it, refresh it and save the .pbix"),
+  c("Deployment", "data/powerbi/powerbi_reconciliation.csv",
+    "The R figures the dashboard is checked against"),
+  c("Deployment", "models/CHANGELOG.md", "Model version and how to roll back")
+)
+phase <- function(p) knitr::kable(MAP[MAP$Phase == p, c("Artifact", "Holds", "Present")],
+                                 row.names = FALSE)
+```
+
+```{r missing, results='asis'}
+gone <- MAP$Artifact[MAP$Present == "MISSING"]
+if (length(gone)) {
+  cat("**", length(gone), " artifact(s) named in this map are not in the repository:** `",
+      paste(gone, collapse = "`, `"), "`\n\n", sep = "")
+} else {
+  cat("All ", nrow(MAP), " artifacts named in this map are present.\n\n", sep = "")
+}
+```
+
+## 1. Business understanding
+
+Households that cannot reliably get enough food have to be found before limited support can be
+targeted, so the project was framed as ranking households for follow-up rather than as explaining
+food insecurity. Three business objectives (BO1 to BO3) and six hypotheses (H1 to H6) were fixed in
+Milestone 1 and are answered in sections 4 and 7 of the final report. The decision that shaped
+everything after it: the tool advises an official, it never decides eligibility.
+
+```{r}
+phase("Business understanding")
+```
+
+## 2. Data understanding
+
+The GHS 2024 arrives as eleven files. Milestone 1 profiled all of them; seven household-level files
+were kept, D01 to D03 were dropped as person-level and D11 as a different survey with no shared
+household IDs. The phase's most useful finding was a false alarm corrected later: the 256 to 272
+"duplicate" household IDs per file were 18-digit IDs read as numbers, not duplicate households.
+
+```{r}
+phase("Data understanding")
+```
+
+## 3. Data preparation
+
+Each file was cleaned before joining, every treatment logged, and the files joined one at a time
+with guarded one-to-one joins that stop rather than silently drop a household. Fifteen placeholder
+keys in D05 were repaired by row position and confirmed against province, settlement type and
+survey weight. The target is the count of eight food-access items; those items and eight related
+columns are excluded from the predictors, which the notebook asserts.
+
+```{r}
+phase("Data preparation")
+```
+
+## 4. Modelling
+
+Three candidates were tuned with stratified five-fold cross-validation on the training set only:
+regularised multinomial logistic regression, a decision tree and a random forest. The three-tier
+target could not separate its thin middle tier, which was the condition written down in advance for
+falling back to a binary screen, so a fourth model - a lasso logistic regression on any food
+insecurity - was fitted with the same recipe and became the deployed one.
+
+```{r}
+phase("Modelling")
+```
+
+## 5. Evaluation
+
+The models were scored once on the untouched 30% test set and compared on how well they rank
+households, not on accuracy, which the 69% food-secure majority would flatter. The referral
+threshold of 0.24 was chosen on cross-validation under a policy rule agreed beforehand: find at
+least 80% of at-risk households at the fewest referrals.
+
+```{r}
+phase("Evaluation")
+```
+
+## 6. Deployment
+
+Two things reached a user: a nine-page Power BI dashboard for the programme manager setting referral
+capacity, and an R/Shiny tool for an official assessing one household or a batch. Both serve the
+same workflow object that was evaluated, by the path `validate -> clean -> preprocess -> score`.
+Monitoring thresholds, retraining triggers and rollback are in the handover notes.
+
+```{r}
+phase("Deployment")
+```
+
+## Milestone 4: making it all agree
+
+The final milestone added no new analysis. It merged the two first-iteration dashboards into one
+report on the final dataset, assembled the final document, and made every quoted figure traceable:
+
+* `report/M4/merge_final_report.py` builds the report from the three members' parts and asserts the
+  section order and the table numbering.
+* `report/M4/check_numbers.py` re-asserts every evaluation figure quoted in the report, the slides
+  and the dashboard against `data/evaluation/`.
+* `report/M4/build_personB_sections.py`, `build_personC_sections.py` and
+  `build_ethics_and_ai_log.py` generate the report sections and the ethics and AI log from the data
+  files, so no number is typed in by hand.
+* `powerbi/M4_Merged_Dashboard/scripts/build.py` assembles the dashboard project and decodes its own
+  embedded tables back out to prove they match `data/powerbi/`.

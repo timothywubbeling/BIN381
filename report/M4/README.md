@@ -30,14 +30,23 @@ time, so the report cannot drift from the notebook. If the model is ever retrain
 
 ## What is still outstanding
 
+Updated 19 October, after the merge. Items 2 to 4 below are done; what is left needs Power BI
+Desktop, Word or a person.
+
 1. **Rudi's sign-off** on the AI log in `BIN381_M4_PersonB_Reflection_and_AI_Log.md` (AI-M4-7 records
-   that the assistant built the dashboard pages).
-2. **Alexander's two dashboard pages** ("Where the need is", "Who is affected"). Recommendation 4 in
-   §6 promises a province drill-down "on the dashboard"; it only becomes true once those exist.
-3. **The slide deck itself.** Slides 5–7 exist as notes only; screenshots for them are in
-   `docs/figures/pbi_b*.png`.
-4. **Hand to Timothy** for merging into the final report, with the cover page, contents,
-   references and the 10-page check.
+   that the assistant built the dashboard pages). Appendix A of the report carries these entries.
+2. ~~Alexander's two dashboard pages~~ — done. The merged dashboard has "Where the need is" and
+   "Who is affected" as pages 2 and 3, so recommendation 4's province drill-down exists.
+3. ~~The slide deck~~ — built: `BIN381_M4_Slides_Group_P1.pptx`, ten slides with speaker notes,
+   from these notes and Timothy's. Slides 1–4 are drafted from the report and are **Alexander's to
+   approve**.
+4. ~~Hand to Timothy~~ — merged: `BIN381_M4_Report_Group_P1.docx`, sections 1 to 8 in order with
+   both appendices (`merge_final_report.py`).
+5. **Still to do, and only on a machine with the applications** (see the repository `README.md`,
+   *Milestone 4 deliverables*): save the dashboard as a `.pbix`, export the nine page screenshots
+   over `docs/figures/pbi_m4_*.png`, check the 10-page limit in Word and export the report PDF,
+   and fill the `TO CONFIRM` rows in the ethics log — Alexander's and Rudi's entries and
+   reflections.
 
 ## Numbers that matter
 

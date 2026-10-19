@@ -1,7 +1,7 @@
 # Household Food-Insecurity Screening — BIN381 Group P1 (SDHSA)
 
 Alexander Solomon · Rudi Jan du Plessis · Timothy Wubbeling
-Belgium Campus iTversity · BIN381 Project · Milestone 3 (Modelling, Evaluation, Deployment)
+Belgium Campus iTversity · BIN381 Project · Milestone 4 (final synthesis: report, dashboard, hand-over)
 
 A classification model that estimates how likely a South African household is to be
 food insecure, built on the Stats SA General Household Survey 2024, and an R/Shiny
@@ -19,14 +19,15 @@ not an eligibility test** — see *Responsible use* below.
 | `data/modelling/` | Person A: fitted candidate workflows, CV and test predictions, model parameter table, input schema, class-weight comparison |
 | `data/evaluation/` | Person B: evaluation matrix, metrics, thresholds, calibration, subgroup performance, monitoring baseline, figures |
 | `data/powerbi/` | Tables for the Power BI dashboard: all 20,925 households scored by the deployed model, model summary, subgroup performance, drivers, and the R reconciliation table |
-| `notebook/` | `BIN 381 Milestone 3 - Full Notebook (Group P1).Rmd` runs Parts A, B and C end to end; the three part notebooks (A modelling, B evaluation, C deployment, monitoring and ethics) with knitted HTML; the three Milestone 2 notebooks (C cleaning, B integration, A preparation for modelling); `M1_EDA.Rmd` |
+| `notebook/` | `BIN 381 Milestone 4 - CRISP-DM Driver (Group P1).Rmd` maps the whole project onto the six CRISP-DM phases and points at the file that carries each decision — **start here**; `BIN 381 Milestone 3 - Full Notebook (Group P1).Rmd` runs Parts A, B and C end to end; the three part notebooks (A modelling, B evaluation, C deployment, monitoring and ethics) with knitted HTML; the three Milestone 2 notebooks (C cleaning, B integration, A preparation for modelling); `M1_EDA.Rmd` |
 | `models/` | `final_workflow.rds` (the deployed model, a copy of `data/modelling/final_workflow_binary.rds`), `reference.rds` (training reference for explanations and drift checks) and `CHANGELOG.md` (model versions, how to add one and how to roll back) |
 | `app/` | Shiny app: `app.R` plus `R/validate.R`, `R/score.R`, `R/monitor.R` |
 | `R/` | Person C checks: `check_app_matches_model.R`, `fairness_check.R`, `review_monitoring.R`, `make_reference.R`; `export_powerbi.R` builds `data/powerbi/` |
 | `tests/` | `messy_households.csv` (deliberately bad input) and `test_validation.R` |
 | `monitoring/` | `batch_log.csv`, written by the app at run time (not committed): per-upload totals only, no household rows |
-| `docs/` | `figures/` (app screenshots and the deployment workflow diagram used in the report) and `powerbi_build_guide.md` (how to build the Power BI dashboard from `data/powerbi/`) |
-| `report/` | The Milestone 3 report (`BIN381_M3_Report_Group_P1.pdf`) and the Ethics and Responsible AI Usage Log (`BIN381_M3_Ethics_and_AI_Usage_Log.pdf`), each with its editable `.docx` |
+| `docs/` | `figures/` (app and dashboard screenshots and the deployment workflow diagram used in the report), `powerbi_build_guide.md` (first-iteration dashboard) and `powerbi_m4_person_b_pages.md` (the Milestone 4 performance, subgroup and driver pages, with their DAX) |
+| `powerbi/` | `M4_Merged_Dashboard/` — the nine-page group dashboard as a PBIP project, with its own `README.md`, the `scripts/` that generate it and the data embedded in the model, so it opens anywhere; `BIN381_M4_Dashboard.pbix` is the pre-merge Person B file, kept as the record of the first iteration |
+| `report/` | The Milestone 3 report and Ethics and AI Usage Log (`.pdf` and `.docx`), and `M4/`: the final report, the ethics and AI log, the hand-over notes, each member's sections and slide notes, and the scripts that build them |
 | `renv/`, `renv.lock` | Pinned package versions (R 4.6.1, 225 packages) |
 
 ## Requirements
@@ -78,6 +79,30 @@ not an eligibility test** — see *Responsible use* below.
    the issues table lists the sentinel codes, the unseen code, the text value and the
    duplicate ID.
 
+## Milestone 4 deliverables, and what rebuilds each one
+
+The report, the ethics log and the dashboard are **generated**, not hand-edited: every figure in them
+is read from `data/evaluation/`, `data/modelling/` or `data/powerbi/` at build time, so they cannot
+drift from the notebooks. The build scripts are Python and need `python-docx`
+(`pip install python-docx`); everything else in the project is R.
+
+| Deliverable | File | Rebuild with |
+|---|---|---|
+| Final report | `report/M4/BIN381_M4_Report_Group_P1.docx` | `python report/M4/merge_final_report.py` (merges Alexander's sections 1–4, 6, 8 with Timothy's 5 and 7 and appends the ethics log). Export the PDF from Word, which also rebuilds the contents page |
+| Ethics report and AI log | `report/M4/BIN381_M4_Ethics_and_AI_Usage_Log.docx` (and `.md`) | `python report/M4/build_ethics_and_ai_log.py` |
+| Report sections | `report/M4/BIN381_M4_PersonB_Sections_4_6_8.docx`, `..._PersonC_Sections_5_7.docx` | `python report/M4/build_personB_sections.py`, `build_personC_sections.py` |
+| Every quoted figure | — | `python report/M4/check_numbers.py` — exits non-zero if any deliverable stops reconciling with `data/evaluation/` |
+| Power BI dashboard | `powerbi/M4_Merged_Dashboard/` (PBIP source) → save as `powerbi/BIN381_M4_Dashboard_Group_P1.pbix` | `powerbi/M4_Merged_Dashboard/README.md` — open the `.pbip`, **Refresh**, check the Threshold slicer reads 0.24, then *Save as* the `.pbix`. Hand the markers the `.pbix` |
+| Presentation | `report/M4/BIN381_M4_Slides_Group_P1.pptx` | `python report/M4/build_slides.py`, from the speaker notes in `report/M4/BIN381_M4_PersonB_Slides_5_to_7.md` and `..._PersonC_Slides_8_to_10.md` |
+| Analysis by CRISP-DM phase | `notebook/BIN 381 Milestone 4 - CRISP-DM Driver (Group P1).Rmd` | Knit it; it also checks every artifact it names is present |
+| Final dataset and dictionary | `data/integrated/M2_final_modelling_dataset.rds`, `BIN381_M2_Data_Dictionary.csv` | Knit the Milestone 2 notebooks (see *Reproduce everything*) |
+| Shiny app | `app/` | `shiny::runApp("app")` |
+| Hand-over notes | `report/M4/BIN381_M4_Handover_and_Maintenance.md` | Model version and rollback, monitoring rules and thresholds, retraining and retirement triggers, who owns what, known issues |
+
+**After a retrain**, follow the order in `powerbi/M4_Merged_Dashboard/README.md` (*Maintenance*): the
+dashboard holds its own snapshot of `data/powerbi/`, so it has to be rebuilt and re-saved or it will
+keep showing the previous numbers while the report shows the new ones.
+
 ## How new data is handled
 
 `validate → clean → preprocess → score`
@@ -104,7 +129,8 @@ not an eligibility test** — see *Responsible use* below.
   (rows not scored, missing-income rate, PSI for income, settlement type and household
   size, share flagged). `R/review_monitoring.R` applies the alert rules.
 - Baselines are in `data/evaluation/monitoring_baseline.csv`; recall alert below 0.707.
-  Retraining and retirement triggers are in the Milestone 3 report (deployment and monitoring section).
+  Retraining and retirement triggers, rollback and ownership are in
+  `report/M4/BIN381_M4_Handover_and_Maintenance.md`.
 
 ## Responsible use
 
@@ -122,4 +148,6 @@ for BIN381). https://isibaloweb.statssa.gov.za/
 
 ## AI use
 
-AI use is acknowledged in the Milestone 3 report and in the group's Ethics and Responsible AI Usage Log.
+Generative AI (Claude, Anthropic) was used during this project. It is acknowledged in section 7 of
+the final report and every use is recorded in `report/M4/BIN381_M4_Ethics_and_AI_Usage_Log.docx`,
+which continues the Milestone 3 log.
