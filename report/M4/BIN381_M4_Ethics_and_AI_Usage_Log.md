@@ -6,12 +6,7 @@ presentation and hand-over.
 BIN381 SDHSA project, Group P1. Log lead: Timothy Wubbeling (602543), with Alexander
 Solomon (601638) and Rudi Jan du Plessis (601342). October 2026.
 
-> **Before upload.** Rows marked `TO CONFIRM` belong to Alexander and Rudi. Rudi's
-> Milestone 4 AI entries are drafted in `BIN381_M4_PersonB_Reflection_and_AI_Log.md`,
-> which is referenced in `report/M4/README.md` but is not yet in the repository; its
-> entries run to AI-M4-7, so Timothy's are numbered AI-M4-C1 onward to avoid a clash.
-> Renumber into one sequence only once all three sets are in, and each member must check
-> their own acknowledgement.
+> **Before upload.** Every ethics and AI row is filled in. Two things are still > their authors' own: section 8, Rudi's reflection, and E4-12, which was drafted > from the evaluation decisions in section 4 of the report for him to confirm. > Each member checks their own acknowledgement.
 
 ## 1. Purpose
 
