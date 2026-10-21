@@ -96,7 +96,7 @@ drift from the notebooks. The build scripts are Python and need `python-docx`
 | Presentation | `report/M4/BIN381_M4_Slides_Group_P1.pptx` | `python report/M4/build_slides.py` — appends Person C's slides 8–10, from `..._PersonC_Slides_8_to_10.md`, to Alexander's slides 1–7 in `BIN381_M4_PersonA_Slides_1_4.pptx`, in his layout |
 | Analysis by CRISP-DM phase | `notebook/BIN 381 Milestone 4 - CRISP-DM Driver (Group P1).Rmd` | Knit it; it also checks every artifact it names is present |
 | Final dataset and dictionary | `data/integrated/M2_final_modelling_dataset.rds`, `BIN381_M2_Data_Dictionary.csv` | Knit the Milestone 2 notebooks (see *Reproduce everything*) |
-| Shiny app | `app/` | `shiny::runApp("app")` |
+| Shiny app | `app/` | `shiny::runApp("app")`, or double-click `RunScreeningApp.exe` at the project root — it finds R, starts the app and opens the browser, and says which piece is missing if R or the project library is not installed (source in `app/launcher/`). It launches R; it does not contain it |
 | Hand-over notes | `report/M4/BIN381_M4_Handover_and_Maintenance.md` | Model version and rollback, monitoring rules and thresholds, retraining and retirement triggers, who owns what, known issues |
 
 **After a retrain**, follow the order in `powerbi/M4_Merged_Dashboard/README.md` (*Maintenance*): the
