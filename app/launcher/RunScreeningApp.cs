@@ -10,9 +10,8 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Win32;
 using System.Windows.Forms;
@@ -102,32 +101,25 @@ class RunScreeningApp
         return null;
     }
 
-    static int FreePort()
-    {
-        TcpListener probe = new TcpListener(IPAddress.Loopback, 0);
-        probe.Start();
-        int port = ((IPEndPoint)probe.LocalEndpoint).Port;
-        probe.Stop();
-        return port;
-    }
+    // R picks its own port and prints "Listening on http://127.0.0.1:PORT". Reading that back
+    // is both the readiness signal and the address: there is no window in which this launcher
+    // holds a port that R has not bound yet, so nothing else can take it in between and be
+    // opened in a window titled like ours.
+    static readonly Regex LISTENING =
+        new Regex(@"Listening on (http://127\.0\.0\.1:\d+)", RegexOptions.IgnoreCase);
 
-    static bool WaitForApp(int port, Process r)
+    static string WaitForUrl(StringBuilder log, Process r)
     {
         for (int i = 0; i < STARTUP_SECONDS * 2; i++)
         {
-            if (r.HasExited) return false;               // R died; the caller shows its output
-            try
-            {
-                using (TcpClient client = new TcpClient())
-                {
-                    IAsyncResult hit = client.BeginConnect(IPAddress.Loopback, port, null, null);
-                    if (hit.AsyncWaitHandle.WaitOne(400) && client.Connected) return true;
-                }
-            }
-            catch { }
+            string seen;
+            lock (log) { seen = log.ToString(); }
+            Match m = LISTENING.Match(seen);
+            if (m.Success) return m.Groups[1].Value;
+            if (r.HasExited) return null;          // died early; the caller shows its output
             Thread.Sleep(500);
         }
-        return false;
+        return null;
     }
 
     [STAThread]
@@ -165,10 +157,8 @@ class RunScreeningApp
             return 3;
         }
 
-        int port = FreePort();
         ProcessStartInfo start = new ProcessStartInfo(rscript,
-            "-e \"shiny::runApp('app', port = " + port +
-            ", host = '127.0.0.1', launch.browser = FALSE)\"");
+            "-e \"shiny::runApp('app', host = '127.0.0.1', launch.browser = FALSE)\"");
         start.WorkingDirectory = root;      // .Rprofile activates renv; app.R resolves ../models
         start.UseShellExecute = false;
         start.CreateNoWindow = true;
@@ -197,19 +187,19 @@ class RunScreeningApp
             return 4;
         }
 
-        if (!WaitForApp(port, r))
+        string url = WaitForUrl(log, r);
+        if (url == null)
         {
             string tail;
             lock (log) { tail = log.ToString(); }
             if (tail.Length > 1500) tail = tail.Substring(tail.Length - 1500);
             try { if (!r.HasExited) r.Kill(); } catch { }
             Complain("The app did not start",
-                "R ran but never started serving on port " + port + ".\n\nWhat R said:\n\n" +
+                "R ran but never reported a listening address.\n\nWhat R said:\n\n" +
                 (tail.Length == 0 ? "(nothing)" : tail));
             return 5;
         }
 
-        string url = "http://127.0.0.1:" + port + "/";
         string browser = FindAppModeBrowser();
         if (browser == null)
         {
