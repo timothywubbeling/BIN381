@@ -2,13 +2,18 @@
 //
 //   csc /target:winexe /out:RunScreeningApp.exe app\launcher\RunScreeningApp.cs
 //
-// It finds R, finds the project, and runs `shiny::runApp("app")` with the project root as the
-// working directory, so .Rprofile activates renv and the model path inside app.R resolves.
-// It cannot install anything: R and the project library have to be there, and the point of the
-// checks below is to say which one is missing instead of failing in a console that disappears.
+// A Shiny app is a local web server, so something has to render HTML. This starts R on a free
+// port with no console, waits for the port to answer, then opens Edge or Chrome in app mode:
+// one window, no tabs and no address bar, which is what people mean by "an application".
+// Closing that window stops R. If R never comes up, its output goes into the error box rather
+// than vanishing with a console nobody saw.
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 using Microsoft.Win32;
 using System.Windows.Forms;
 
@@ -16,17 +21,16 @@ class RunScreeningApp
 {
     const string PROJECT_FILE = "BIN381-P1.Rproj";
     const string LIBRARY_PROBE = @"renv\library\windows\R-4.6\x86_64-w64-mingw32\shiny\DESCRIPTION";
+    const int STARTUP_SECONDS = 120;        // a cold start loads the model and the tidymodels stack
 
     static void Complain(string title, string message)
     {
         MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
     }
 
-    // The exe may sit at the project root or anywhere under it.
     static string FindProjectRoot()
     {
-        DirectoryInfo dir = new DirectoryInfo(
-            Path.GetDirectoryName(Application.ExecutablePath));
+        DirectoryInfo dir = new DirectoryInfo(Path.GetDirectoryName(Application.ExecutablePath));
         while (dir != null)
         {
             if (File.Exists(Path.Combine(dir.FullName, PROJECT_FILE))) return dir.FullName;
@@ -39,9 +43,19 @@ class RunScreeningApp
     {
         using (RegistryKey key = hive.OpenSubKey(path))
         {
-            if (key == null) return null;
-            return key.GetValue("InstallPath") as string;
+            return key == null ? null : key.GetValue("InstallPath") as string;
         }
+    }
+
+    static string FirstFile(string folder, params string[] relatives)
+    {
+        if (string.IsNullOrEmpty(folder)) return null;
+        foreach (string rel in relatives)
+        {
+            string full = Path.Combine(folder, rel);
+            if (File.Exists(full)) return full;
+        }
+        return null;
     }
 
     static string FindRscript()
@@ -51,31 +65,69 @@ class RunScreeningApp
             FromRegistry(Registry.LocalMachine, @"SOFTWARE\R-core\R"),
             FromRegistry(Registry.LocalMachine, @"SOFTWARE\WOW6432Node\R-core\R") })
         {
-            if (string.IsNullOrEmpty(home)) continue;
-            foreach (string sub in new string[] { @"bin\x64\Rscript.exe", @"bin\Rscript.exe" })
-            {
-                string exe = Path.Combine(home, sub);
-                if (File.Exists(exe)) return exe;
-            }
+            string exe = FirstFile(home, @"bin\x64\Rscript.exe", @"bin\Rscript.exe");
+            if (exe != null) return exe;
         }
-        // Installed without writing the registry, or a portable copy: take the newest R-*.
         foreach (string root in new string[] {
             @"C:\Program Files\R", @"C:\Program Files (x86)\R", @"C:\R" })
         {
             if (!Directory.Exists(root)) continue;
             string[] versions = Directory.GetDirectories(root);
             Array.Sort(versions);
-            Array.Reverse(versions);
+            Array.Reverse(versions);                       // newest R first
             foreach (string v in versions)
             {
-                foreach (string sub in new string[] { @"bin\x64\Rscript.exe", @"bin\Rscript.exe" })
-                {
-                    string exe = Path.Combine(v, sub);
-                    if (File.Exists(exe)) return exe;
-                }
+                string exe = FirstFile(v, @"bin\x64\Rscript.exe", @"bin\Rscript.exe");
+                if (exe != null) return exe;
             }
         }
         return null;
+    }
+
+    // Edge ships with Windows, so this nearly always finds something.
+    static string FindAppModeBrowser()
+    {
+        string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        string pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        foreach (string candidate in new string[] {
+            FirstFile(pf86, @"Microsoft\Edge\Application\msedge.exe"),
+            FirstFile(pf, @"Microsoft\Edge\Application\msedge.exe"),
+            FirstFile(pf, @"Google\Chrome\Application\chrome.exe"),
+            FirstFile(pf86, @"Google\Chrome\Application\chrome.exe"),
+            FirstFile(local, @"Google\Chrome\Application\chrome.exe") })
+        {
+            if (candidate != null) return candidate;
+        }
+        return null;
+    }
+
+    static int FreePort()
+    {
+        TcpListener probe = new TcpListener(IPAddress.Loopback, 0);
+        probe.Start();
+        int port = ((IPEndPoint)probe.LocalEndpoint).Port;
+        probe.Stop();
+        return port;
+    }
+
+    static bool WaitForApp(int port, Process r)
+    {
+        for (int i = 0; i < STARTUP_SECONDS * 2; i++)
+        {
+            if (r.HasExited) return false;               // R died; the caller shows its output
+            try
+            {
+                using (TcpClient client = new TcpClient())
+                {
+                    IAsyncResult hit = client.BeginConnect(IPAddress.Loopback, port, null, null);
+                    if (hit.AsyncWaitHandle.WaitOne(400) && client.Connected) return true;
+                }
+            }
+            catch { }
+            Thread.Sleep(500);
+        }
+        return false;
     }
 
     [STAThread]
@@ -105,23 +157,38 @@ class RunScreeningApp
         if (!File.Exists(Path.Combine(root, LIBRARY_PROBE)))
         {
             Complain("The project packages are not installed",
-                "R is installed, but this project's library is empty, so shiny and the model " +
-                "packages are missing.\n\nOpen " + PROJECT_FILE + " in RStudio and run:\n\n" +
-                "    renv::restore()\n\nThat installs the 169 packages pinned in renv.lock. It " +
-                "only has to be done once per machine, and it is not quick.");
+                "R is installed, but this project's library has no shiny in it.\n\nOpen " +
+                PROJECT_FILE + " in RStudio and run:\n\n    renv::install(c(\"shiny\", " +
+                "\"bslib\", \"DT\", \"workflows\", \"glmnet\", \"recipes\", \"parsnip\", " +
+                "\"hardhat\"), type = \"binary\")\n\nThat is enough to run the app. The full " +
+                "renv::restore() also needs Rtools - see the README.");
             return 3;
         }
 
-        // A visible console: if R fails (a missing package, a locked port), the reason stays on
-        // screen instead of disappearing with the window.
+        int port = FreePort();
         ProcessStartInfo start = new ProcessStartInfo(rscript,
-            "-e \"cat('Starting the household food-insecurity screening app...\\n'); " +
-            "shiny::runApp('app', launch.browser = TRUE)\"");
+            "-e \"shiny::runApp('app', port = " + port +
+            ", host = '127.0.0.1', launch.browser = FALSE)\"");
         start.WorkingDirectory = root;      // .Rprofile activates renv; app.R resolves ../models
         start.UseShellExecute = false;
+        start.CreateNoWindow = true;
+        start.RedirectStandardOutput = true;
+        start.RedirectStandardError = true;
+
+        StringBuilder log = new StringBuilder();
+        DataReceivedEventHandler collect = delegate(object sender, DataReceivedEventArgs e)
+        {
+            if (e.Data != null) lock (log) { log.AppendLine(e.Data); }
+        };
+
+        Process r;
         try
         {
-            Process.Start(start);
+            r = Process.Start(start);
+            r.OutputDataReceived += collect;      // drained, or a full pipe would stall R
+            r.ErrorDataReceived += collect;
+            r.BeginOutputReadLine();
+            r.BeginErrorReadLine();
         }
         catch (Exception e)
         {
@@ -129,6 +196,34 @@ class RunScreeningApp
                 "start:\n" + e.Message);
             return 4;
         }
+
+        if (!WaitForApp(port, r))
+        {
+            string tail;
+            lock (log) { tail = log.ToString(); }
+            if (tail.Length > 1500) tail = tail.Substring(tail.Length - 1500);
+            try { if (!r.HasExited) r.Kill(); } catch { }
+            Complain("The app did not start",
+                "R ran but never started serving on port " + port + ".\n\nWhat R said:\n\n" +
+                (tail.Length == 0 ? "(nothing)" : tail));
+            return 5;
+        }
+
+        string url = "http://127.0.0.1:" + port + "/";
+        string browser = FindAppModeBrowser();
+        if (browser == null)
+        {
+            Process.Start(url);               // no Edge or Chrome: ordinary browser, R left running
+            return 0;
+        }
+
+        // Its own profile folder, so the window is its own process and closing it means closing
+        // the app rather than detaching into an already-running browser.
+        string profile = Path.Combine(Path.GetTempPath(), "bin381-screening-app-window");
+        Process window = Process.Start(browser,
+            "--app=" + url + " --window-size=1280,900 --user-data-dir=\"" + profile + "\"");
+        if (window != null) window.WaitForExit();
+        try { if (!r.HasExited) r.Kill(); } catch { }
         return 0;
     }
 }
