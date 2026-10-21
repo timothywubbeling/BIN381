@@ -34,6 +34,21 @@ not an eligibility test** — see *Responsible use* below.
 
 - R 4.6.1 and RStudio (tested on Windows 11)
 - Package versions are pinned in `renv.lock`; `renv` activates automatically when the project opens
+- **Rtools 4.6 as well, if you want the full `renv::restore()`.** About twenty of the pinned
+  versions (DT, curl, httr, knitr, xfun, htmlwidgets, RcppArmadillo, tidymodels, tune,
+  workflowsets, rmarkdown and friends) are only on CRAN as source at those versions, so without a
+  compiler they fail with `'make' not found` — and `restore()` is all-or-nothing, so it rolls the
+  whole library back and leaves empty package folders behind. Delete any directory under
+  `renv/library/.../` that has no `DESCRIPTION` before trying again.
+- **To run only the app, you do not need Rtools.** Current binaries are enough:
+  ```r
+  renv::install(c("shiny", "bslib", "DT", "workflows", "glmnet",
+                  "recipes", "parsnip", "hardhat"), type = "binary")
+  ```
+  That installs about 95 packages in a few minutes. The saved workflow loads and scores
+  identically on those versions — the rural demo household scores 0.801 either way — but the
+  library then no longer matches `renv.lock`, so it is not a clean-clone reproduction of the
+  analysis. Knitting the notebooks still needs the pinned set, and therefore Rtools.
 
 ## Reproduce everything
 
